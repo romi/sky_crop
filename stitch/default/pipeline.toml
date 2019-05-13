@@ -1,0 +1,6 @@
+[MatchedImages]
+ratio = 0.5
+
+[DatabaseConfig]
+db_location = "/home/kodda/Data/robot_chatelain"
+scan_id = "2019-04-16_15-15-09"

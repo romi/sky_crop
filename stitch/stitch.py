@@ -187,29 +187,76 @@ def correct(im):
    res=cv2.undistort(im, K, dc)
    return res
 
-def estim(f1, f2, imdir, filter_params, resdir, plotit=False):
-   t0=time.time()
-   ima_0=cv2.imread(imdir+f1)
-   imb_0=cv2.imread(imdir+f2)
-
+def estim(ima_0, imb_0, filter_params, plotit=False):
    ima = cv2.cvtColor(ima_0, cv2.COLOR_BGR2GRAY)
    imb = cv2.cvtColor(imb_0, cv2.COLOR_BGR2GRAY)
 
    kp1,kp2,matches=getMatches(ima,imb)
    p1,p2=filter_matches(kp1, kp2, matches, filter_params) 
-   print("%s matches found for %s and %s"%(len(p1), f1, f2))
+   print("%s matches found"%(len(p1)))
 
    if len(p1):
-      if plotit: draw_matches(ima_0, imb_0, p1, p2 , resdir+"/matches_%s_%s.png"%(f1,f2), lwidth=5,r=8)
       H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
       HR = cv2.estimateAffinePartial2D(p1, p2)
-      np.save(resdir+"/H_%s_%s.npy"%(f1,f2),H)
-      np.save(resdir+"/H_%s_%s_p1.npy"%(f1,f2),p1)
-      np.save(resdir+"/H_%s_%s_p2.npy"%(f1,f2),p2)
-      np.save(resdir+"/HR_%s_%s.npy"%(f1,f2),HR)
    else: 
       H=None
       HR=None   
-   print("H=", H)
-   t1=time.time()
-   print("it took", t1-t0, "seconds")
+   return HR[0]
+
+def trComb(t1,t2):
+    res=np.zeros([2,3])
+    res[:2,:2]= np.dot(t2[:2,:2],t1[:2,:2])
+    res[:,2]=np.dot(t2[:2,:2],t1[:,2])+t2[:,2]
+    return res
+
+def trPoint(t,x):
+    return np.dot(t[:2,:2],x.T).T+t[:2,2]
+
+def getTrs(homs, w, h, fs, M):
+   idtr=np.zeros([2,3])
+   idtr[0,0]=1
+   idtr[1,1]=1
+   trs=[idtr]
+   Hs=[idtr]
+   pts=np.array([[0,0],[w,0],[w,h],[0,h],[0,0]])
+
+   for i in range(M): 
+    Hs.append(np.array(homs["%s_%s"%(fs[i].get_id(),fs[(i+1)].get_id())]["homography"]))
+   for i in range(M):
+      tr_all=idtr
+      for j in range(i+1,M+1): 
+        tr_all=trComb(tr_all,Hs[j])
+      trs.append(tr_all)
+      pts=np.concatenate([pts,trPoint(trs[-1],pts[:5])])
+   trs.append(idtr)
+   return trs, pts
+
+
+def map(fs, homs):
+   M=len(fs)-1
+   
+   im0=fs[0].read_image()
+   h, w, _= im0.shape
+   trs, pts=getTrs(homs, w, h, fs, M)
+
+   Wmax,Hmax = np.max(pts,axis=0).astype(np.int)+1
+   Wmin,Hmin = np.min(pts,axis=0).astype(np.int)
+   Wres= Wmax-Wmin
+   Hres= Hmax-Hmin
+
+   offset=np.zeros([2,3])
+   offset[0,0]=1
+   offset[1,1]=1
+   offset[:,2]=[-Wmin,-Hmin]
+
+   res=np.zeros([Hres,Wres,3],dtype=np.uint8)
+   print(im0.shape,res.shape)
+   for i in range(1,M):
+      im=cv2.resize(fs[i].read_image(),(w,h))
+
+      warped=cv2.warpAffine(im, trComb(trs[i+1],offset), (Wres,Hres))
+      imin=int(np.where(warped)[0].min()+.2*h)
+      imax=int(imin+.6*h)
+      res[imin:imax]=warped[imin:imax]
+
+   return res
