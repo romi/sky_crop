@@ -52,3 +52,49 @@ print("[INFO] loading Mask R-CNN model...")
 model = modellib.MaskRCNN(mode="inference", config=config,
                           model_dir=os.getcwd())
 model.load_weights(args["weights"], by_name=True)
+
+# load the input image, convert it from BGR to RGB channel
+# ordering, and resize the image
+image = cv2.imread(args["image"])
+image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+image = imutils.resize(image, width=512)
+
+# perform a forward pass of the network to obtain the results
+print("[INFO] making predictions with Mask R-CNN...")
+r = model.detect([image], verbose=1)[0]
+
+# loop over of the detected object's bounding boxes and masks
+for i in range(0, r["rois"].shape[0]):
+    # extract the class ID and mask for the current detection, then
+    # grab the color to visualize the mask (in BGR format)
+    classID = r["class_ids"][i]
+    mask = r["masks"][:, :, i]
+    color = COLORS[classID][::-1]
+
+    # visualize the pixel-wise mask of the object
+    image = visualize.apply_mask(image, mask, color, alpha=0.5)
+
+# convert the image back to BGR so we can use OpenCV's drawing
+# functions
+image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+# loop over the predicted scores and class labels
+for i in range(0, len(r["scores"])):
+    # extract the bounding box information, class ID, label, predicted
+    # probability, and visualization color
+    (startY, startX, endY, endX) = r["rois"][i]
+    classID = r["class_ids"][i]
+    label = CLASS_NAMES[classID]
+    score = r["scores"][i]
+    color = [int(c) for c in np.array(COLORS[classID]) * 255]
+
+    # draw the bounding box, class label, and score of the object
+    cv2.rectangle(image, (startX, startY), (endX, endY), color, 2)
+    text = "{}: {:.3f}".format(label, score)
+    y = startY - 10 if startY - 10 > 10 else startY + 10
+    cv2.putText(image, text, (startX, y), cv2.FONT_HERSHEY_SIMPLEX,
+                0.6, color, 2)
+
+# show the output image
+cv2.imshow("Output", image)
+cv2.waitKey()
