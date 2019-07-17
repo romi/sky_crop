@@ -1,4 +1,8 @@
 # import the necessary packages
+# USAGE
+# python maskrcnn_predict.py --weights mask_rcnn_coco.h5 --labels coco_labels.txt --image images/30th_birthday.jpg
+
+
 from mrcnn.config import Config
 from mrcnn import model as modellib
 from mrcnn import visualize
