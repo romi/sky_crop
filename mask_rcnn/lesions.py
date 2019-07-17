@@ -1,236 +1,308 @@
-"""
-Mask R-CNN
-Base Configurations class.
+# USAGE
+# python lesions.py --mode train
+# python lesions.py --mode investigate
+# python lesions.py --mode predict \
+# 	--image isic2018/ISIC2018_Task1-2_Training_Input/ISIC_0000000.jpg
 
-Copyright (c) 2017 Matterport, Inc.
-Licensed under the MIT License (see LICENSE for details)
-Written by Waleed Abdulla
-"""
-
+# import the necessary packages
+from imgaug import augmenters as iaa
+from mrcnn.config import Config
+from mrcnn import model as modellib
+from mrcnn import visualize
+from mrcnn import utils
+from imutils import paths
 import numpy as np
+import argparse
+import imutils
+import random
+import cv2
+import os
 
+# initialize the dataset path, images path, and annotations file path
+DATASET_PATH = os.path.abspath("isic2018")
+IMAGES_PATH = os.path.sep.join([DATASET_PATH,
+	"ISIC2018_Task1-2_Training_Input"])
+MASKS_PATH = os.path.sep.join([DATASET_PATH,
+	"ISIC2018_Task1_Training_GroundTruth"])
 
-# Base Configuration Class
-# Don't use this class directly. Instead, sub-class it and override
-# the configurations you need to change.
+# initialize the amount of data to use for training
+TRAINING_SPLIT = 0.8
 
-class Config(object):
-    """Base configuration class. For custom configurations, create a
-    sub-class that inherits from this one and override properties
-    that need to be changed.
-    """
-    # Name the configurations. For example, 'COCO', 'Experiment 3', ...etc.
-    # Useful if your code needs to do things differently depending on which
-    # experiment is running.
-    NAME = None  # Override in sub-classes
+# grab all image paths, then randomly select indexes for both training
+# and validation
+IMAGE_PATHS = sorted(list(paths.list_images(IMAGES_PATH)))
+idxs = list(range(0, len(IMAGE_PATHS)))
+random.seed(42)
+random.shuffle(idxs)
+i = int(len(idxs) * TRAINING_SPLIT)
+trainIdxs = idxs[:i]
+valIdxs = idxs[i:]
 
-    # NUMBER OF GPUs to use. When using only a CPU, this needs to be set to 1.
-    GPU_COUNT = 1
+# initialize the class names dictionary
+CLASS_NAMES = {1: "lesion"}
 
-    # Number of images to train with on each GPU. A 12GB GPU can typically
-    # handle 2 images of 1024x1024px.
-    # Adjust based on your GPU memory and image sizes. Use the highest
-    # number that your GPU can handle for best performance.
-    IMAGES_PER_GPU = 2
+# initialize the path to the Mask R-CNN pre-trained on COCO
+COCO_PATH = "mask_rcnn_coco.h5"
 
-    # Number of training steps per epoch
-    # This doesn't need to match the size of the training set. Tensorboard
-    # updates are saved at the end of each epoch, so setting this to a
-    # smaller number means getting more frequent TensorBoard updates.
-    # Validation stats are also calculated at each epoch end and they
-    # might take a while, so don't set this too small to avoid spending
-    # a lot of time on validation stats.
-    STEPS_PER_EPOCH = 1000
+# initialize the name of the directory where logs and output model
+# snapshots will be stored
+LOGS_AND_MODEL_DIR = "lesions_logs"
 
-    # Number of validation steps to run at the end of every training epoch.
-    # A bigger number improves accuracy of validation stats, but slows
-    # down the training.
-    VALIDATION_STEPS = 50
+class LesionBoundaryConfig(Config):
+	# give the configuration a recognizable name
+	NAME = "lesion"
 
-    # Backbone network architecture
-    # Supported values are: resnet50, resnet101.
-    # You can also provide a callable that should have the signature
-    # of model.resnet_graph. If you do so, you need to supply a callable
-    # to COMPUTE_BACKBONE_SHAPE as well
-    BACKBONE = "resnet101"
+	# set the number of GPUs to use training along with the number of
+	# images per GPU (which may have to be tuned depending on how
+	# much memory your GPU has)
+	GPU_COUNT = 1
+	IMAGES_PER_GPU = 1
 
-    # Only useful if you supply a callable to BACKBONE. Should compute
-    # the shape of each layer of the FPN Pyramid.
-    # See model.compute_backbone_shapes
-    COMPUTE_BACKBONE_SHAPE = None
+	# set the number of steps per training epoch and validation cycle
+	STEPS_PER_EPOCH = len(trainIdxs) // (IMAGES_PER_GPU * GPU_COUNT)
+	VALIDATION_STEPS = len(valIdxs) // (IMAGES_PER_GPU * GPU_COUNT)
 
-    # The strides of each layer of the FPN Pyramid. These values
-    # are based on a Resnet101 backbone.
-    BACKBONE_STRIDES = [4, 8, 16, 32, 64]
+	# number of classes (+1 for the background)
+	NUM_CLASSES = len(CLASS_NAMES) + 1
 
-    # Size of the fully-connected layers in the classification graph
-    FPN_CLASSIF_FC_LAYERS_SIZE = 1024
+class LesionBoundaryInferenceConfig(LesionBoundaryConfig):
+	# set the number of GPUs and images per GPU (which may be
+	# different values than the ones used for training)
+	GPU_COUNT = 1
+	IMAGES_PER_GPU = 1
 
-    # Size of the top-down layers used to build the feature pyramid
-    TOP_DOWN_PYRAMID_SIZE = 256
+	# set the minimum detection confidence (used to prune out false
+	# positive detections)
+	DETECTION_MIN_CONFIDENCE = 0.9
 
-    # Number of classification classes (including background)
-    NUM_CLASSES = 1  # Override in sub-classes
+class LesionBoundaryDataset(utils.Dataset):
+	def __init__(self, imagePaths, classNames, width=1024):
+		# call the parent constructor
+		super().__init__(self)
 
-    # Length of square anchor side in pixels
-    RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
+		# store the image paths and class names along with the width
+		# we'll resize images to
+		self.imagePaths = imagePaths
+		self.classNames = classNames
+		self.width = width
 
-    # Ratios of anchors at each cell (width/height)
-    # A value of 1 represents a square anchor, and 0.5 is a wide anchor
-    RPN_ANCHOR_RATIOS = [0.5, 1, 2]
+	def load_lesions(self, idxs):
+		# loop over all class names and add each to the 'lesion'
+		# dataset
+		for (classID, label) in self.classNames.items():
+			self.add_class("lesion", classID, label)
 
-    # Anchor stride
-    # If 1 then anchors are created for each cell in the backbone feature map.
-    # If 2, then anchors are created for every other cell, and so on.
-    RPN_ANCHOR_STRIDE = 1
+		# loop over the image path indexes
+		for i in idxs:
+			# extract the image filename to serve as the unique
+			# image ID
+			imagePath = self.imagePaths[i]
+			filename = imagePath.split(os.path.sep)[-1]
 
-    # Non-max suppression threshold to filter RPN proposals.
-    # You can increase this during training to generate more propsals.
-    RPN_NMS_THRESHOLD = 0.7
+			# add the image to the dataset
+			self.add_image("lesion", image_id=filename,
+				path=imagePath)
 
-    # How many anchors per image to use for RPN training
-    RPN_TRAIN_ANCHORS_PER_IMAGE = 256
+	def load_image(self, imageID):
+		# grab the image path, load it, and convert it from BGR to
+		# RGB color channel ordering
+		p = self.image_info[imageID]["path"]
+		image = cv2.imread(p)
+		image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-    # ROIs kept after tf.nn.top_k and before non-maximum suppression
-    PRE_NMS_LIMIT = 6000
+		# resize the image, preserving the aspect ratio
+		image = imutils.resize(image, width=self.width)
 
-    # ROIs kept after non-maximum suppression (training and inference)
-    POST_NMS_ROIS_TRAINING = 2000
-    POST_NMS_ROIS_INFERENCE = 1000
+		# return the image
+		return image
 
-    # If enabled, resizes instance masks to a smaller size to reduce
-    # memory load. Recommended when using high-resolution images.
-    USE_MINI_MASK = True
-    MINI_MASK_SHAPE = (56, 56)  # (height, width) of the mini-mask
+	def load_mask(self, imageID):
+		# grab the image info and derive the full annotation path
+		# file path
+		info = self.image_info[imageID]
+		filename = info["id"].split(".")[0]
+		annotPath = os.path.sep.join([MASKS_PATH,
+			"{}_segmentation.png".format(filename)])
 
-    # Input image resizing
-    # Generally, use the "square" resizing mode for training and predicting
-    # and it should work well in most cases. In this mode, images are scaled
-    # up such that the small side is = IMAGE_MIN_DIM, but ensuring that the
-    # scaling doesn't make the long side > IMAGE_MAX_DIM. Then the image is
-    # padded with zeros to make it a square so multiple images can be put
-    # in one batch.
-    # Available resizing modes:
-    # none:   No resizing or padding. Return the image unchanged.
-    # square: Resize and pad with zeros to get a square image
-    #         of size [max_dim, max_dim].
-    # pad64:  Pads width and height with zeros to make them multiples of 64.
-    #         If IMAGE_MIN_DIM or IMAGE_MIN_SCALE are not None, then it scales
-    #         up before padding. IMAGE_MAX_DIM is ignored in this mode.
-    #         The multiple of 64 is needed to ensure smooth scaling of feature
-    #         maps up and down the 6 levels of the FPN pyramid (2**6=64).
-    # crop:   Picks random crops from the image. First, scales the image based
-    #         on IMAGE_MIN_DIM and IMAGE_MIN_SCALE, then picks a random crop of
-    #         size IMAGE_MIN_DIM x IMAGE_MIN_DIM. Can be used in training only.
-    #         IMAGE_MAX_DIM is not used in this mode.
-    IMAGE_RESIZE_MODE = "square"
-    IMAGE_MIN_DIM = 800
-    IMAGE_MAX_DIM = 1024
-    # Minimum scaling ratio. Checked after MIN_IMAGE_DIM and can force further
-    # up scaling. For example, if set to 2 then images are scaled up to double
-    # the width and height, or more, even if MIN_IMAGE_DIM doesn't require it.
-    # However, in 'square' mode, it can be overruled by IMAGE_MAX_DIM.
-    IMAGE_MIN_SCALE = 0
-    # Number of color channels per image. RGB = 3, grayscale = 1, RGB-D = 4
-    # Changing this requires other changes in the code. See the WIKI for more
-    # details: https://github.com/matterport/Mask_RCNN/wiki
-    IMAGE_CHANNEL_COUNT = 3
+		# load the annotation mask and resize it, *making sure* to
+		# use nearest neighbor interpolation
+		annotMask = cv2.imread(annotPath)
+		annotMask = cv2.split(annotMask)[0]
+		annotMask = imutils.resize(annotMask, width=self.width,
+			inter=cv2.INTER_NEAREST)
+		annotMask[annotMask > 0] = 1
 
-    # Image mean (RGB)
-    MEAN_PIXEL = np.array([123.7, 116.8, 103.9])
+		# determine the number of unique class labels in the mask
+		classIDs = np.unique(annotMask)
 
-    # Number of ROIs per image to feed to classifier/mask heads
-    # The Mask RCNN paper uses 512 but often the RPN doesn't generate
-    # enough positive proposals to fill this and keep a positive:negative
-    # ratio of 1:3. You can increase the number of proposals by adjusting
-    # the RPN NMS threshold.
-    TRAIN_ROIS_PER_IMAGE = 200
+		# the class ID with value '0' is actually the background
+		# which we should ignore and remove from the unique set of
+		# class identifiers
+		classIDs = np.delete(classIDs, [0])
 
-    # Percent of positive ROIs used to train classifier/mask heads
-    ROI_POSITIVE_RATIO = 0.33
+		# allocate memory for our [height, width, num_instances]
+		# array where each "instance" effectively has its own
+		# "channel" -- since there is only one lesion per image we
+		# know the number of instances is equal to 1
+		masks = np.zeros((annotMask.shape[0], annotMask.shape[1], 1),
+			dtype="uint8")
 
-    # Pooled ROIs
-    POOL_SIZE = 7
-    MASK_POOL_SIZE = 14
+		# loop over the class IDs
+		for (i, classID) in enumerate(classIDs):
+			# construct a mask for *only* the current label
+			classMask = np.zeros(annotMask.shape, dtype="uint8")
+			classMask[annotMask == classID] = 1
 
-    # Shape of output mask
-    # To change this you also need to change the neural network mask branch
-    MASK_SHAPE = [28, 28]
+			# store the class mask in the masks array
+			masks[:, :, i] = classMask
 
-    # Maximum number of ground truth instances to use in one image
-    MAX_GT_INSTANCES = 100
+		# return the mask array and class IDs
+		return (masks.astype("bool"), classIDs.astype("int32"))
 
-    # Bounding box refinement standard deviation for RPN and final detections.
-    RPN_BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
-    BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
+if __name__ == "__main__":
+	# construct the argument parser and parse the arguments
+	ap = argparse.ArgumentParser()
+	ap.add_argument("-m", "--mode", required=True,
+		help="either 'train', 'predict', or 'investigate'")
+	ap.add_argument("-w", "--weights",
+		help="optional path to pretrained weights")
+	ap.add_argument("-i", "--image",
+		help="optional path to input image to segment")
+	args = vars(ap.parse_args())
 
-    # Max number of final detections
-    DETECTION_MAX_INSTANCES = 100
+	# check to see if we are training the Mask R-CNN
+	if args["mode"] == "train":
+		# load the training dataset
+		trainDataset = LesionBoundaryDataset(IMAGE_PATHS, CLASS_NAMES)
+		trainDataset.load_lesions(trainIdxs)
+		trainDataset.prepare()
 
-    # Minimum probability value to accept a detected instance
-    # ROIs below this threshold are skipped
-    DETECTION_MIN_CONFIDENCE = 0.7
+		# load the validation dataset
+		valDataset = LesionBoundaryDataset(IMAGE_PATHS, CLASS_NAMES)
+		valDataset.load_lesions(valIdxs)
+		valDataset.prepare()
 
-    # Non-maximum suppression threshold for detection
-    DETECTION_NMS_THRESHOLD = 0.3
+		# initialize the training configuration
+		config = LesionBoundaryConfig()
+		config.display()
 
-    # Learning rate and momentum
-    # The Mask RCNN paper uses lr=0.02, but on TensorFlow it causes
-    # weights to explode. Likely due to differences in optimizer
-    # implementation.
-    LEARNING_RATE = 0.001
-    LEARNING_MOMENTUM = 0.9
+		# initialize the image augmentation process
+		aug = iaa.SomeOf((0, 2), [
+			iaa.Fliplr(0.5),
+			iaa.Flipud(0.5),
+			iaa.Affine(rotate=(-10, 10))
+		])
 
-    # Weight decay regularization
-    WEIGHT_DECAY = 0.0001
+		# initialize the model and load the COCO weights so we can
+		# perform fine-tuning
+		model = modellib.MaskRCNN(mode="training", config=config,
+			model_dir=LOGS_AND_MODEL_DIR)
+		model.load_weights(COCO_PATH, by_name=True,
+			exclude=["mrcnn_class_logits", "mrcnn_bbox_fc",
+				"mrcnn_bbox", "mrcnn_mask"])
 
-    # Loss weights for more precise optimization.
-    # Can be used for R-CNN training setup.
-    LOSS_WEIGHTS = {
-        "rpn_class_loss": 1.,
-        "rpn_bbox_loss": 1.,
-        "mrcnn_class_loss": 1.,
-        "mrcnn_bbox_loss": 1.,
-        "mrcnn_mask_loss": 1.
-    }
+		# train *just* the layer heads
+		model.train(trainDataset, valDataset, epochs=20,
+			layers="heads", learning_rate=config.LEARNING_RATE,
+			augmentation=aug)
 
-    # Use RPN ROIs or externally generated ROIs for training
-    # Keep this True for most situations. Set to False if you want to train
-    # the head branches on ROI generated by code rather than the ROIs from
-    # the RPN. For example, to debug the classifier head without having to
-    # train the RPN.
-    USE_RPN_ROIS = True
+		# unfreeze the body of the network and train *all* layers
+		model.train(trainDataset, valDataset, epochs=40,
+			layers="all", learning_rate=config.LEARNING_RATE / 10,
+			augmentation=aug)
 
-    # Train or freeze batch normalization layers
-    #     None: Train BN layers. This is the normal mode
-    #     False: Freeze BN layers. Good when using a small batch size
-    #     True: (don't use). Set layer in training mode even when predicting
-    TRAIN_BN = False  # Defaulting to False since batch size is often small
+	# check to see if we are predicting using a trained Mask R-CNN
+	elif args["mode"] == "predict":
+		# initialize the inference configuration
+		config = LesionBoundaryInferenceConfig()
 
-    # Gradient norm clipping
-    GRADIENT_CLIP_NORM = 5.0
+		# initialize the Mask R-CNN model for inference
+		model = modellib.MaskRCNN(mode="inference", config=config,
+			model_dir=LOGS_AND_MODEL_DIR)
 
-    def __init__(self):
-        """Set values of computed attributes."""
-        # Effective batch size
-        self.BATCH_SIZE = self.IMAGES_PER_GPU * self.GPU_COUNT
+		# load our trained Mask R-CNN
+		weights = args["weights"] if args["weights"] \
+			else model.find_last()
+		model.load_weights(weights, by_name=True)
 
-        # Input image size
-        if self.IMAGE_RESIZE_MODE == "crop":
-            self.IMAGE_SHAPE = np.array([self.IMAGE_MIN_DIM, self.IMAGE_MIN_DIM,
-                                         self.IMAGE_CHANNEL_COUNT])
-        else:
-            self.IMAGE_SHAPE = np.array([self.IMAGE_MAX_DIM, self.IMAGE_MAX_DIM,
-                                         self.IMAGE_CHANNEL_COUNT])
+		# load the input image, convert it from BGR to RGB channel
+		# ordering, and resize the image
+		image = cv2.imread(args["image"])
+		image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+		image = imutils.resize(image, width=1024)
 
-        # Image meta data length
-        # See compose_image_meta() for details
-        self.IMAGE_META_SIZE = 1 + 3 + 3 + 4 + 1 + self.NUM_CLASSES
+		# perform a forward pass of the network to obtain the results
+		r = model.detect([image], verbose=1)[0]
 
-    def display(self):
-        """Display Configuration values."""
-        print("\nConfigurations:")
-        for a in dir(self):
-            if not a.startswith("__") and not callable(getattr(self, a)):
-                print("{:30} {}".format(a, getattr(self, a)))
-        print("\n")
+		# loop over of the detected object's bounding boxes and
+		# masks, drawing each as we go along
+		for i in range(0, r["rois"].shape[0]):
+			mask = r["masks"][:, :, i]
+			image = visualize.apply_mask(image, mask,
+				(1.0, 0.0, 0.0), alpha=0.5)
+			image = visualize.draw_box(image, r["rois"][i],
+				(1.0, 0.0, 0.0))
+
+		# convert the image back to BGR so we can use OpenCV's
+		# drawing functions
+		image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+		# loop over the predicted scores and class labels
+		for i in range(0, len(r["scores"])):
+			# extract the bounding box information, class ID, label,
+			# and predicted probability from the results
+			(startY, startX, endY, end) = r["rois"][i]
+			classID = r["class_ids"][i]
+			label = CLASS_NAMES[classID]
+			score = r["scores"][i]
+
+			# draw the class label and score on the image
+			text = "{}: {:.4f}".format(label, score)
+			y = startY - 10 if startY - 10 > 10 else startY + 10
+			cv2.putText(image, text, (startX, y),
+				cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+		# resize the image so it more easily fits on our screen
+		image = imutils.resize(image, width=512)
+
+		# show the output image
+		cv2.imshow("Output", image)
+		cv2.waitKey(0)
+
+	# check to see if we are investigating our images and masks
+	elif args["mode"] == "investigate":
+		# load the training dataset
+		trainDataset = LesionBoundaryDataset(IMAGE_PATHS, CLASS_NAMES)
+		trainDataset.load_lesions(trainIdxs)
+		trainDataset.prepare()
+
+		# load the 0-th training image and corresponding masks and
+		# class IDs in the masks
+		image = trainDataset.load_image(0)
+		(masks, classIDs) = trainDataset.load_mask(0)
+
+		# show the image spatial dimensions which is HxWxC
+		print("[INFO] image shape: {}".format(image.shape))
+
+		# show the masks shape which should have the same width and
+		# height of the images but the third dimension should be
+		# equal to the total number of instances in the image itself
+		print("[INFO] masks shape: {}".format(masks.shape))
+
+		# show the length of the class IDs list along with the values
+		# inside the list -- the length of the list should be equal
+		# to the number of instances dimension in the 'masks' array
+		print("[INFO] class IDs length: {}".format(len(classIDs)))
+		print("[INFO] class IDs: {}".format(classIDs))
+
+		# determine a sample of training image indexes and loop over
+		# them
+		for i in np.random.choice(trainDataset.image_ids, 3):
+			# load the image and masks for the sampled image
+			print("[INFO] investigating image index: {}".format(i))
+			image = trainDataset.load_image(i)
+			(masks, classIDs) = trainDataset.load_mask(i)
+
+			# visualize the masks for the current image
+			visualize.display_top_masks(image, masks, classIDs,
+				trainDataset.class_names)
