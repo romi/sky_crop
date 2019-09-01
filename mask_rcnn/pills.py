@@ -150,6 +150,7 @@ class PillsDataset(utils.Dataset):
         # grab the image info and then grab the annotation data for
         # the current image based on the unique ID
         info = self.image_info[imageID]
+        print(info)
         annot = self.annots[info["id"]]
 
         # allocate memory for our [height, width, num_instances] array
@@ -187,7 +188,8 @@ class PillsDataset(utils.Dataset):
             # draw a circular mask for the region and store the mask
             # in the masks array
             # cv2.circle(regionMask, (cX, cY), r, 1, -1)
-            cv2.polylines(regionMask, [ptsList], True, (0, 255, 0))
+            cv2.polylines(regionMask, [ptsList], True, (255, 2550, 255), 10)
+            cv2.fillPoly(regionMask, [ptsList], 255)
             masks[:, :, i] = regionMask
 
         # return the mask array and class IDs, which for this dataset
