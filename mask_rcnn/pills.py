@@ -45,7 +45,7 @@ COCO_PATH = "mask_rcnn_coco.h5"
 
 # initialize the name of the directory where logs and output model
 # snapshots will be stored
-LOGS_AND_MODEL_DIR = "/Volumes/noumena/logs"
+LOGS_AND_MODEL_DIR = "logs"
 
 
 class PillsConfig(Config):
@@ -165,23 +165,15 @@ class PillsDataset(utils.Dataset):
 
             # grab the shape and region attributes
             sa = region["shape_attributes"]
-            print(sa)
             ra = region["region_attributes"]
-            print(ra)
-
-            print("/////////////////////////////")
 
             # scale the center (x, y)-coordinates and radius of the
             # circle based on the dimensions of the resized image
             ratio = info["width"] / float(info["orig_width"])
-            print(ratio)
 
             X = [int(i * ratio) for i in sa["all_points_x"]]
-            print(X)
             Y = [int(i * ratio) for i in sa["all_points_y"]]
-            print(Y)
             ptsList  = np.column_stack((X,Y))
-            #print(ptsList)
 
             # r = int(sa["r"] * ratio)
 
