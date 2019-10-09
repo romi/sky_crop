@@ -18,6 +18,7 @@ import random
 import json
 import cv2
 import os
+import glob
 
 # initialize the dataset path, images path, and annotations file path
 DATASET_PATH = os.path.abspath("lettuce")
@@ -246,6 +247,7 @@ if __name__ == "__main__":
         weights = args["weights"] if args["weights"] \
             else model.find_last()
         model.load_weights(weights, by_name=True)
+
 
         # load the input image, convert it from BGR to RGB channel
         # ordering, and resize the image
