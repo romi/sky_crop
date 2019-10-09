@@ -45,7 +45,7 @@ COCO_PATH = "mask_rcnn_coco.h5"
 
 # initialize the name of the directory where logs and output model
 # snapshots will be stored
-LOGS_AND_MODEL_DIR = "logs"
+LOGS_AND_MODEL_DIR = "/Volumes/noumena/logs"
 
 
 class ObjConfig(Config):
@@ -289,6 +289,7 @@ if __name__ == "__main__":
 
         # show the output image
         cv2.imshow("Output", image)
+        cv2.imwrite("predict/LETTUCE_PREDICT.jpg", image)
         cv2.waitKey(0)
 
     # check to see if we are investigating our images and masks
