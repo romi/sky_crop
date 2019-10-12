@@ -272,7 +272,7 @@ if __name__ == "__main__":
             for i in range(0, r["rois"].shape[0]):
                 mask = r["masks"][:, :, i]
                 image = visualize.apply_mask(image, mask,
-                                             (1.0, 0.0, 0.0), alpha=0.5)
+                                             (1.0, 0.0, 0.0), alpha=0.4)
                 image = visualize.draw_box(image, r["rois"][i],
                                            (1.0, 0.0, 0.0))
 
