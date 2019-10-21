@@ -20,6 +20,7 @@ import cv2
 import os
 import glob
 
+
 # initialize the dataset path, images path, and annotations file path
 DATASET_PATH = os.path.abspath("lettuce")
 IMAGES_PATH = os.path.sep.join([DATASET_PATH, "images"])
@@ -249,7 +250,8 @@ if __name__ == "__main__":
         model.load_weights(weights, by_name=True)
 
         #define path
-        filepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/examples/*"
+        # filepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/examples/*"
+        filepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/lettuce/images/*"
         savepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/detection/"
 
         #start loop to read images
@@ -308,7 +310,7 @@ if __name__ == "__main__":
     elif args["mode"] == "investigate":
         # load the training dataset
         trainDataset = ObjDataset(IMAGE_PATHS, ANNOT_PATH,
-                                    CLASS_NAMES)
+CLASS_NAMES)
         trainDataset.load_obj(trainIdxs)
         trainDataset.prepare()
 
