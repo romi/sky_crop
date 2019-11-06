@@ -234,8 +234,8 @@ def find_marker(image):
         print ("marker_area is:", marker_area)
         midA = (int((box[0][0] + box[1][0]) / 2), int((box[0][1] + box[1][1]) / 2))
         midB = (int((box[1][0] + box[2][0]) / 2), int((box[1][1] + box[2][1]) / 2))
-        mA = 100
-        mB = 100
+        mA = 50
+        mB = 50
         actual_marker_area = mA * mB
         image_scale = math.sqrt(actual_marker_area / marker_area)
         print ("image scale is:", image_scale)
