@@ -24,7 +24,6 @@ import operator
 from scipy.spatial import distance as dist
 from imutils import perspective
 
-
 # initialize the dataset path, images path, and annotations file path
 DATASET_PATH = os.path.abspath("lettuce")
 IMAGES_PATH = os.path.sep.join([DATASET_PATH, "images"])
@@ -179,7 +178,7 @@ class ObjDataset(utils.Dataset):
 
             X = [int(i * ratio) for i in sa["all_points_x"]]
             Y = [int(i * ratio) for i in sa["all_points_y"]]
-            ptsList  = np.column_stack((X,Y))
+            ptsList = np.column_stack((X, Y))
 
             # r = int(sa["r"] * ratio)
 
@@ -197,60 +196,67 @@ class ObjDataset(utils.Dataset):
 
 
 def find_marker(image):
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_red = np.array([90, 50, 50])
-    upper_red = np.array([180, 255, 255])
-    mask = cv2.inRange(hsv, lower_red, upper_red)
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)  # converting to HSV
+    lower_red = np.array([90, 50, 50])  # lower range for blue marker
+    upper_red = np.array([180, 255, 255])  # upper range for blue marker
+    mask = cv2.inRange(hsv, lower_red, upper_red)  # find the blue marker
     res = cv2.bitwise_and(image, image, mask=mask)
-    res = cv2.GaussianBlur(res, (5, 5), cv2.BORDER_DEFAULT)
+    res = cv2.GaussianBlur(res, (5, 5), cv2.BORDER_DEFAULT)  # blurring to prepare for edge detection
     gray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
     edged = cv2.Canny(gray, 50, 150)
     edged = cv2.dilate(edged, None, iterations=2)
     edged = cv2.erode(edged, None, iterations=2)
     cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
+    cnts = imutils.grab_contours(cnts)  # contour (boundary) of the blue marker
 
+    # creating a dictionary for each marker found, associated with it's area
     cnts_areas = {}
     for ind in range(len(cnts)):
         cnt_area = cv2.contourArea(cnts[ind])
         cnts_areas[ind] = cnt_area
 
+    # finding the largest contour (largest marker)
     largest_contour = max(cnts_areas.items(), key=operator.itemgetter(1))[0]
+    print (largest_contour)
     box = cv2.minAreaRect(cnts[largest_contour])
     box = cv2.boxPoints(box)
     box = np.array(box, dtype="int")
     box = perspective.order_points(box)
     cv2.drawContours(image, [box.astype("int")], -1, (0, 255, 0), 2)
+
+    # finding the X and Y dimensions of the marker in the picture
     dA = math.sqrt((box[0][0] - box[1][0]) ** 2 + (box[0][1] - box[1][1]) ** 2)
     dB = math.sqrt((box[1][0] - box[2][0]) ** 2 + (box[1][1] - box[2][1]) ** 2)
     marker_area = dA * dB
 
-    if marker_area >500:
+    # writing the dimensions of the marker on the picture
+    if marker_area > 500:
+        print ("marker_area is:", marker_area)
         midA = (int((box[0][0] + box[1][0]) / 2), int((box[0][1] + box[1][1]) / 2))
         midB = (int((box[1][0] + box[2][0]) / 2), int((box[1][1] + box[2][1]) / 2))
-        mA = 10
-        mB = 10
+        mA = 100
+        mB = 100
         actual_marker_area = mA * mB
-        image_scale = marker_area / actual_marker_area
-        # dA = dA / image_scale
-        # dB = dB / image_scale
+        image_scale = math.sqrt(actual_marker_area / marker_area)
+        print ("image scale is:", image_scale)
+        dA = dA * image_scale
+        dB = dB * image_scale
         cv2.putText(image, str(int(dA)), midA, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         cv2.putText(image, str(int(dB)), midB, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        return image_scale
 
-    return image
 
-
-def draw_box_size(image,box_pts):
+def draw_box_size(image, box_pts,scale):
     x1 = box_pts[1]
     y1 = box_pts[0]
     x2 = box_pts[3]
     y2 = box_pts[2]
     dX = (x2 - x1)
     dY = (y2 - y1)
-    mA = (int( dX/2+x1 ), int(y2))
-    mB = (int(x2) , int(dY/2 + y1))
-    cv2.putText(image, str(int(dX)), mA, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv2.putText(image, str(int(dY)), mB, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    mA = (int(dX / 2 + x1), int(y2))
+    mB = (int(x2), int(dY / 2 + y1))
+    cv2.putText(image, str(int(dX * scale)), mA, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    cv2.putText(image, str(int(dY * scale)), mB, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
 
 if __name__ == "__main__":
@@ -309,16 +315,16 @@ if __name__ == "__main__":
             else model.find_last()
         model.load_weights(weights, by_name=True)
 
-        #define path
+        # define path
         filepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/lettuce/images/*.JPG"
         savepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/lettuce/detection"
         directory = glob.glob(filepath)
         directory.sort()
-        #save detected image ratio
-        file = open('ratios.txt','w')
-        #start loop to read images
+        # save detected image ratio
+        file = open('ratios.txt', 'w')
+        # start loop to read images
         for imagepath in directory:
-            #get image name
+            # get image name
             filename = os.path.basename(imagepath)
 
             # load the input image, convert it from BGR to RGB channel
@@ -330,6 +336,9 @@ if __name__ == "__main__":
             # perform a forward pass of the network to obtain the results
             r = model.detect([image], verbose=1)[0]
 
+            # finding the blue marker in the pictures, returns the scale of the image
+            image_scale = find_marker(image)
+            if image_scale is None: image_scale = 0
             # loop over of the detected object's bounding boxes and
             # masks, drawing each as we go along
             for i in range(0, r["rois"].shape[0]):
@@ -343,7 +352,7 @@ if __name__ == "__main__":
                 image = visualize.draw_box(image, r["rois"][i],
                                            (1.0, 0.0, 0.0))
 
-                draw_box_size(image, (r["rois"][i]))
+                draw_box_size(image, (r["rois"][i]),image_scale)
 
             # convert the image back to BGR so we can use OpenCV's
             # drawing functions
@@ -365,19 +374,17 @@ if __name__ == "__main__":
                 cv2.putText(image, text, (startX, y),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-            find_marker(image)
-
 
             # resize the image so it more easily fits on our screen
             # image = imutils.resize(image, width=1024)
 
             # show and save the output image
             imgDetect = os.path.join(savepath, "PREDICT_" + filename)
-            #cv2.imshow(filename, image)
+            # cv2.imshow(filename, image)
             cv2.imwrite(imgDetect, image)
-            #cv2.waitKey(0)
-            print (filename)
-            print (ratio)
+            # cv2.waitKey(0)
+            print(filename)
+            print(ratio)
             file.write(str(filename))
             file.write(" ,")
             file.write(str(ratio))
@@ -388,7 +395,7 @@ if __name__ == "__main__":
     elif args["mode"] == "investigate":
         # load the training dataset
         trainDataset = ObjDataset(IMAGE_PATHS, ANNOT_PATH,
-CLASS_NAMES)
+                                  CLASS_NAMES)
         trainDataset.load_obj(trainIdxs)
         trainDataset.prepare()
 
