@@ -12,6 +12,8 @@ from mrcnn import visualize
 from mrcnn import utils
 from imutils import paths
 import numpy as np
+import pandas as pd
+from pandas import Series, DataFrame
 import argparse
 import imutils
 import random
@@ -19,6 +21,7 @@ import json
 import cv2
 import os
 import glob
+from exif import Image
 
 
 # initialize the dataset path, images path, and annotations file path
@@ -237,6 +240,7 @@ if __name__ == "__main__":
 
     # check to see if we are predicting using a trained Mask R-CNN
     elif args["mode"] == "predict":
+        # load our trained Mask R-CNN
         # initialize the inference configuration
         config = ObjInferenceConfig()
 
@@ -244,27 +248,42 @@ if __name__ == "__main__":
         model = modellib.MaskRCNN(mode="inference", config=config,
                                   model_dir=LOGS_AND_MODEL_DIR)
 
-        # load our trained Mask R-CNN
         weights = args["weights"] if args["weights"] \
             else model.find_last()
         model.load_weights(weights, by_name=True)
 
         #define path
-        # filepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/examples/*"
-        filepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/lettuce/images/*"
+        filepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/examples/*"
         savepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/detection/"
+
+        #create image database
+        img_name = []
+        img_size = []
+        img_datetime = []
+        img_log = []
+        img_scores = []
+        img_detect = []
+
+        data = {'Log': img_log, 'Img_Name': img_name, 'Img_Datetime': img_datetime,
+                'Img_Size': img_size, 'Scores': img_scores}
 
         #start loop to read images
         for imagepath in glob.glob(filepath):
 
-            #get image name
+            # get image name
             filename = os.path.basename(imagepath)
 
             # load the input image, convert it from BGR to RGB channel
             # ordering, and resize the image
             image = cv2.imread(imagepath)
+            print(imagepath)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = imutils.resize(image, width=1024)
+
+            # read metadata
+            with open(imagepath, 'rb') as image_file:
+                print(image_file)
+                my_image = Image(image_file)
 
             # perform a forward pass of the network to obtain the results
             r = model.detect([image], verbose=1)[0]
@@ -290,6 +309,17 @@ if __name__ == "__main__":
                 classID = r["class_ids"][i]
                 label = CLASS_NAMES[classID]
                 score = r["scores"][i]
+                #print('THE SCORE IS: %s' % score)
+
+                # save data for i of scores and class labels
+                img_scores.append(score)
+                img_datetime.append(my_image.datetime)
+                img_size.append(my_image.pixel_x_dimension)
+                logPath = os.path.join(savepath, LOGS_AND_MODEL_DIR + "/lettuce*")
+                logName= glob.glob(logPath)
+                logs_file = os.path.basename(logName[0])
+                img_log.append(logs_file)
+                img_name.append(filename)
 
                 # draw the class label and score on the image
                 text = "{}: {:.4f}".format(label, score)
@@ -306,11 +336,17 @@ if __name__ == "__main__":
             cv2.imwrite(imgDetect, image)
             #cv2.waitKey(0)
 
+        # create dataframe from a dictionary
+        print(data)
+        detection_dataframe = DataFrame(data)
+        print(detection_dataframe)
+
+
+
     # check to see if we are investigating our images and masks
     elif args["mode"] == "investigate":
         # load the training dataset
-        trainDataset = ObjDataset(IMAGE_PATHS, ANNOT_PATH,
-CLASS_NAMES)
+        trainDataset = ObjDataset(IMAGE_PATHS, ANNOT_PATH, CLASS_NAMES)
         trainDataset.load_obj(trainIdxs)
         trainDataset.prepare()
 
@@ -335,6 +371,7 @@ CLASS_NAMES)
 
         # determine a sample of training image indexes and loop over
         # them
+
         for i in np.random.choice(trainDataset.image_ids, 3):
             # load the image and masks for the sampled image
             print("[INFO] investigating image index: {}".format(i))

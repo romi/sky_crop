@@ -16,6 +16,7 @@ defusedxml==0.6.0
 docutils==0.14
 entrypoints==0.3
 enum34==1.1.6
+exif==0.8.1
 gast==0.2.2
 google-pasta==0.1.7
 grpcio==1.21.1
@@ -56,6 +57,7 @@ opencv-contrib-python==4.1.0.25
 opencv-python==4.1.0.25
 opt-einsum==3.1.0
 packaging==19.0
+pandas==0.25.3
 pandocfilters==1.4.2
 parso==0.4.0
 pexpect==4.7.0
