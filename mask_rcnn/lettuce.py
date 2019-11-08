@@ -258,14 +258,16 @@ if __name__ == "__main__":
 
         #create image database
         img_name = []
-        img_size = []
+        img_size_x = []
+        img_size_y = []
         img_datetime = []
         img_log = []
         img_scores = []
         img_detect = []
+        img_mask = []
 
         data = {'Log': img_log, 'Img_Name': img_name, 'Img_Datetime': img_datetime,
-                'Img_Size': img_size, 'Scores': img_scores}
+                'Img_X': img_size_x, 'Img_Y': img_size_y, 'Scores': img_scores, 'Mask': img_mask}
 
         #start loop to read images
         for imagepath in glob.glob(filepath):
@@ -314,12 +316,14 @@ if __name__ == "__main__":
                 # save data for i of scores and class labels
                 img_scores.append(score)
                 img_datetime.append(my_image.datetime)
-                img_size.append(my_image.pixel_x_dimension)
+                img_size_x.append(image.shape[0])
+                img_size_y.append(image.shape[1])
                 logPath = os.path.join(savepath, LOGS_AND_MODEL_DIR + "/lettuce*")
                 logName= glob.glob(logPath)
                 logs_file = os.path.basename(logName[0])
                 img_log.append(logs_file)
                 img_name.append(filename)
+                img_mask.append(mask)
 
                 # draw the class label and score on the image
                 text = "{}: {:.4f}".format(label, score)
@@ -337,9 +341,9 @@ if __name__ == "__main__":
             #cv2.waitKey(0)
 
         # create dataframe from a dictionary
-        print(data)
-        detection_dataframe = DataFrame(data)
-        print(detection_dataframe)
+        detection_df = DataFrame(data)
+        detection_df.to_csv('detection_df.csv')
+        print(detection_df)
 
 
 
