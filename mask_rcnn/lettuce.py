@@ -342,7 +342,7 @@ if __name__ == "__main__":
 
         # create dataframe from a dictionary
         detection_df = DataFrame(data)
-        detection_df.to_csv('detection_df.csv')
+        detection_df.to_csv('detection_df.csv',index=False)
         print(detection_df)
 
 
