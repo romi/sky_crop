@@ -32,7 +32,7 @@ df_group = df.groupby(['Img_Name','Log']).mean()['Scores'].unstack().reset_index
 print(df_group)
 
 
-plt.xticks(np.arange(len(df_group)), rotation=0)
+plt.xticks(np.arange(len(df_group)),df_group['Img_Name'], rotation=0)
 ax.set_xlabel('Images')
 ax.set_ylabel('Scores')
 df_group.plot(ax=ax,legend=True)
