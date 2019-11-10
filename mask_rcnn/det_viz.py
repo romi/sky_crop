@@ -1,5 +1,4 @@
 # EVALUATE CNN EFFICIENCY BASED ON NUMBER OF DETECTIONS AND RATIO
-
 # basic import
 import numpy as np
 import pandas as pd
@@ -27,7 +26,7 @@ df = df.reset_index(drop=True)
 #print(df)
 
 #group by pictures subplots
-fig, ax = plt.subplots(figsize=(14,7))
+fig, ax = plt.subplots(figsize=(25,7))
 df_group = df.groupby(['Img_Name','Log']).mean()['Scores'].unstack().reset_index()
 print(df_group)
 
@@ -38,14 +37,4 @@ ax.set_ylabel('Scores')
 df_group.plot(ax=ax,legend=True)
 plt.show()
 
-
-# #plot with reset index!
-# df_group = df.groupby(['Log','Img_Name'])[['Scores']].mean().reset_index()
-# df_group.plot(ax=ax,legend=True)
-# print(df_group)
-#
-# plt.xticks(np.arange(len(df_group)),df_group['Img_Name'],rotation='vertical')
-# ax.set_xlabel('Img_Name')
-# ax.set_ylabel('Scores')
-# plt.show()
 
