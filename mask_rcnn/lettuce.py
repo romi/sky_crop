@@ -178,21 +178,20 @@ class ObjDataset(utils.Dataset):
 
             X = [int(i * ratio) for i in sa["all_points_x"]]
             Y = [int(i * ratio) for i in sa["all_points_y"]]
-            ptsList  = np.column_stack((X,Y))
+            ptsList = np.column_stack((X,Y))
 
             # r = int(sa["r"] * ratio)
 
             # draw a circular mask for the region and store the mask
             # in the masks array
             # cv2.circle(regionMask, (cX, cY), r, 1, -1)
-            cv2.polylines(regionMask, [ptsList], True, (255, 2550, 255), 10)
+            cv2.polylines(regionMask, [ptsList], True, (255, 255, 255), 10)
             cv2.fillPoly(regionMask, [ptsList], 255)
             masks[:, :, i] = regionMask
 
         # return the mask array and class IDs, which for this dataset
         # is all 1's
-        return (masks.astype("bool"), np.ones((masks.shape[-1],),
-                                              dtype="int32"))
+        return (masks.astype("bool"), np.ones((masks.shape[-1],),dtype="int32"))
 
 
 if __name__ == "__main__":
@@ -264,10 +263,9 @@ if __name__ == "__main__":
         img_log = []
         img_scores = []
         img_detect = []
-        img_mask = []
 
         data = {'Log': img_log, 'Img_Name': img_name, 'Img_Datetime': img_datetime,
-                'Img_X': img_size_x, 'Img_Y': img_size_y, 'Scores': img_scores, 'Mask': img_mask}
+                'Img_X': img_size_x, 'Img_Y': img_size_y, 'Scores': img_scores}
 
         #start loop to read images
         for imagepath in glob.glob(filepath):
@@ -281,6 +279,8 @@ if __name__ == "__main__":
             print(imagepath)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = imutils.resize(image, width=1024)
+            # image_mask= np.zeros([image.shape[0],image.shape[1],3],dtype=np.uint8)
+            # image_mask.fill(255)
 
             # read metadata
             with open(imagepath, 'rb') as image_file:
@@ -292,13 +292,23 @@ if __name__ == "__main__":
 
             # loop over of the detected object's bounding boxes and
             # masks, drawing each as we go along
+            mask=[]
             for i in range(0, r["rois"].shape[0]):
                 mask = r["masks"][:, :, i]
-                image = visualize.apply_mask(image, mask,
-                                             (1.0, 0.0, 0.0), alpha=0.4)
+                # image = visualize.apply_mask(image, mask,
+                #                              (1.0, 0.0, 0.0), alpha=0.4)
+                image_mask = visualize.apply_mask(image_mask, mask,
+                                             (0, 0.0, 0.0), alpha=1)
                 image = visualize.draw_box(image, r["rois"][i],
                                            (1.0, 0.0, 0.0))
 
+                r_channel, g_channel, b_channel = cv2.split(image)
+                a_channel = np.where((0)|(mask == 1), 255,0).astype('uint8')
+
+                img_RGBA = cv2.merge((r_channel, g_channel, b_channel, a_channel))
+
+
+            cv2.imwrite("test.png", img_RGBA)
             # convert the image back to BGR so we can use OpenCV's
             # drawing functions
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -323,7 +333,6 @@ if __name__ == "__main__":
                 logs_file = os.path.basename(logName[0])
                 img_log.append(logs_file)
                 img_name.append(filename)
-                img_mask.append(mask)
 
                 # draw the class label and score on the image
                 text = "{}: {:.4f}".format(label, score)
@@ -341,7 +350,7 @@ if __name__ == "__main__":
             #cv2.waitKey(0)
 
         # create dataframe from a dictionary
-        detection_df = DataFrame(data)
+        detection_df = DataFrame.from_dict(data)
         detection_df.to_csv('detection_df.csv',index=False)
         print(detection_df)
 
