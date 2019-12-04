@@ -297,18 +297,18 @@ if __name__ == "__main__":
                 mask = r["masks"][:, :, i]
                 # image = visualize.apply_mask(image, mask,
                 #                              (1.0, 0.0, 0.0), alpha=0.4)
-                image_mask = visualize.apply_mask(image_mask, mask,
-                                             (0, 0.0, 0.0), alpha=1)
                 image = visualize.draw_box(image, r["rois"][i],
                                            (1.0, 0.0, 0.0))
 
                 r_channel, g_channel, b_channel = cv2.split(image)
-                a_channel = np.where((0)|(mask == 1), 255,0).astype('uint8')
-
-                img_RGBA = cv2.merge((r_channel, g_channel, b_channel, a_channel))
+                a_channel = np.where((mask == 2)|(mask == 1), 255,0).astype('uint8')
 
 
-            cv2.imwrite("test.png", img_RGBA)
+                a_channel = (mask[i-1] == 1) & (mask[i]==1)
+                img_BGRA = cv2.merge((b_channel, g_channel, r_channel, a_channel))
+
+
+            cv2.imwrite("test.png", img_BGRA)
             # convert the image back to BGR so we can use OpenCV's
             # drawing functions
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
