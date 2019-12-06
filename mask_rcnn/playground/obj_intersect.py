@@ -1,83 +1,58 @@
-import shapely.geometry
-import shapely.affinity
-from matplotlib import pyplot
-from descartes import PolygonPatch
+from imutils import paths
 import numpy as np
-import pandas as pd
-import cv2
+import argparse
 import imutils
-from mrcnn import visualize
+import random
+import json
+import cv2
+import os
 
-# class RotatedRect:
-#     def __init__(self, cx, cy, w, h, angle):
-#         self.cx = cx
-#         self.cy = cy
-#         self.w = w
-#         self.h = h
-#         self.angle = angle
-#
-#     def get_contour(self):
-#         w = self.w
-#         h = self.h
-#         c = shapely.geometry.box(-w/2.0, -h/2.0, w/2.0, h/2.0)
-#         rc = shapely.affinity.rotate(c, self.angle)
-#         return shapely.affinity.translate(rc, self.cx, self.cy)
-#
-#     def intersection(self, other):
-#         print(self.get_contour().intersection(other.get_contour()).area)
-#         print(self.get_contour())
-#         return self.get_contour().intersection(other.get_contour())
-#
-#
-# r1 = RotatedRect(10, 15, 15, 10, 30)
-# r2 = RotatedRect(15, 15, 20, 10, 0)
+path = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/IoU/via_project_6Dec2019_15h1m.json"
+
+# parse JSON
+with open(path, 'r') as myfile:
+    data = myfile.read()
+json_data = json.loads(data)
+metadata =  (json_data['_via_img_metadata'])
+for i in metadata:
+    shape_attributes = (metadata[i]['regions'][0]['shape_attributes'])
+    x = shape_attributes['all_points_x']
+    y = shape_attributes['all_points_y']
 
 
-#####################################################################
-#DATA VISUALIZATION
+# read source image
+img = cv2.imread('/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/IoU/10.JPG')
+b_channel, g_channel, r_channel = cv2.split(img)
+
+# draw white mask on black background
+background = np.zeros((img.shape[0],img.shape[1],3), np.uint8)
+ptsList  = np.column_stack((x,y))
+bkg=cv2.polylines(background, [ptsList], True, (0, 0, 0), 1)
+bkg=cv2.fillPoly(background, [ptsList], (255,255,255))
+
+# # save mask on alpha channel
+# a_channel = np.where ((b_channel==255), 255,0).astype('uint8')
+# img = cv2.merge((b_channel, g_channel, r_channel, a_channel))
+image_b = imutils.resize(bkg, width=1024)
+b,g,image_b= cv2.split(image_b)
+print(image_b.shape)
+cv2.imshow('mask_IoU',image_b)
 
 
-
-# fig = pyplot.figure(1, figsize=(10, 4))
-# ax = fig.add_subplot(121)
-# ax.set_xlim(0, 30)
-# ax.set_ylim(0, 30)
-#
-# ax.add_patch(PolygonPatch(r1.get_contour(), fc='#990000', alpha=0.7))
-# ax.add_patch(PolygonPatch(r2.get_contour(), fc='#000099', alpha=0.7))
-# ax.add_patch(PolygonPatch(r1.intersection(r2), fc='#009900', alpha=1))
-#
-# pyplot.show()
-
-#####################################################################
-#CREATE MASK FROM DATAFRAME
-
-#open image
+#open predicted image
 imagepath = ('/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/detection/PREDICT_10.png')
 pred_img = cv2.imread(imagepath, cv2.IMREAD_UNCHANGED)
 pred_img = imutils.resize(pred_img, width=1024)
 
-b,g,r,a = cv2.split(pred_img)
-print(a.shape)
-# cv2.imshow('alpha',a)
-# cv2.waitKey(0)
+b,g,r,image_a = cv2.split(pred_img)
+print(image_a.shape)
+cv2.imshow('predicted', image_a)
 
-b = np.zeros(pred_img.shape[:2], dtype="uint8")
-b = cv2.circle(b, (600, 400), 100, 255, -1)
-print(b.shape)
-# cv2.imshow('mask',b)
-# cv2.waitKey(0)
-
-print('FIRST IMAGE')
-print(a)
-print(len(a))
-print('SECOND IMAGE')
-print(b)
-print(len(b))
 
 
 #CALCULATE INTERSECTION AREA
-int_area = np.all([[a == 255],[b == 255]],axis=0)
+# int_area = np.all([[image_b == 255],[image_a == 255]],axis=0)
+int_area = np.logical_xor([image_b == 255],[image_a == 255])
 print(int_area)
 int_img = (int_area[0].astype(int))*255
 int_img = int_img.astype(np.uint8)
@@ -86,7 +61,3 @@ print(int_img)
 print(len(int_img))
 cv2.imshow('int', int_img)
 cv2.waitKey(0)
-
-
-
-
