@@ -50,7 +50,7 @@ COCO_PATH = "mask_rcnn_coco.h5"
 
 # initialize the name of the directory where logs and output model
 # snapshots will be stored
-LOGS_AND_MODEL_DIR = "/Volumes/noumena/logs"
+LOGS_AND_MODEL_DIR = "/Volumes/HDD/Noumena/logs"
 
 
 class ObjConfig(Config):
@@ -252,8 +252,8 @@ if __name__ == "__main__":
         model.load_weights(weights, by_name=True)
 
         #define path
-        filepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/examples/*"
-        savepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/detection/"
+        filepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/examples/*"
+        savepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/detection/"
 
         #create image database
         img_name = []
@@ -272,6 +272,7 @@ if __name__ == "__main__":
 
             # get image name
             filename = os.path.basename(imagepath)
+            filename_png = filename[0:-3] + "png"
 
             # load the input image, convert it from BGR to RGB channel
             # ordering, and resize the image
@@ -295,20 +296,18 @@ if __name__ == "__main__":
             mask=[]
             for i in range(0, r["rois"].shape[0]):
                 mask = r["masks"][:, :, i]
-                # image = visualize.apply_mask(image, mask,
-                #                              (1.0, 0.0, 0.0), alpha=0.4)
-                image_mask = visualize.apply_mask(image_mask, mask,
-                                             (0, 0.0, 0.0), alpha=1)
+
                 image = visualize.draw_box(image, r["rois"][i],
                                            (1.0, 0.0, 0.0))
 
-                r_channel, g_channel, b_channel = cv2.split(image)
-                a_channel = np.where((0)|(mask == 1), 255,0).astype('uint8')
+                if i==0:
+                    a_channel = np.where((mask == 2) | (mask == 1), 255, 0).astype('uint8')
+                else:
+                    a_channel = np.where((a_channel == 255)|(mask == 1), 255,0).astype('uint8')
 
-                img_RGBA = cv2.merge((r_channel, g_channel, b_channel, a_channel))
 
 
-            cv2.imwrite("test.png", img_RGBA)
+
             # convert the image back to BGR so we can use OpenCV's
             # drawing functions
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -340,13 +339,18 @@ if __name__ == "__main__":
                 cv2.putText(image, text, (startX, y),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
+
+            b_channel, g_channel, r_channel = cv2.split(image)
+            img_BGRA = cv2.merge((b_channel, g_channel, r_channel, a_channel))
+            # cv2.imwrite("test.png", img_BGRA)
+
             # resize the image so it more easily fits on our screen
             image = imutils.resize(image, width=512)
 
             # show and save the output image
-            imgDetect = os.path.join(savepath, "PREDICT_" + filename)
+            imgDetect = os.path.join(savepath, "PREDICT_" + filename_png)
             #cv2.imshow(filename, image)
-            cv2.imwrite(imgDetect, image)
+            cv2.imwrite(imgDetect, img_BGRA)
             #cv2.waitKey(0)
 
         # create dataframe from a dictionary
