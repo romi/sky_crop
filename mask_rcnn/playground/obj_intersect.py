@@ -63,7 +63,7 @@ print(a.shape)
 # cv2.waitKey(0)
 
 b = np.zeros(pred_img.shape[:2], dtype="uint8")
-b = cv2.circle(b, (500, 400), 200, 255, -1)
+b = cv2.circle(b, (600, 400), 100, 255, -1)
 print(b.shape)
 # cv2.imshow('mask',b)
 # cv2.waitKey(0)
