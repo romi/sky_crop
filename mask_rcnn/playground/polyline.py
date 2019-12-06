@@ -7,7 +7,7 @@ import json
 import cv2
 import os
 
-path = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/annotated/via_project_6Dec2019_15h1m.json"
+path = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/IoU/via_project_6Dec2019_15h1m.json"
 
 # parse JSON
 with open(path, 'r') as myfile:
