@@ -50,7 +50,7 @@ COCO_PATH = "mask_rcnn_coco.h5"
 
 # initialize the name of the directory where logs and output model
 # snapshots will be stored
-LOGS_AND_MODEL_DIR = "/Volumes/HDD/Noumena/logs"
+LOGS_AND_MODEL_DIR = "/Volumes/Noumena/logs"
 
 
 class ObjConfig(Config):
@@ -252,8 +252,8 @@ if __name__ == "__main__":
         model.load_weights(weights, by_name=True)
 
         #define path
-        filepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/examples/*"
-        savepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/detection/"
+        filepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/examples/*"
+        savepath = "/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/detection/"
 
         #create image database
         img_name = []
@@ -342,6 +342,7 @@ if __name__ == "__main__":
 
             b_channel, g_channel, r_channel = cv2.split(image)
             img_BGRA = cv2.merge((b_channel, g_channel, r_channel, a_channel))
+            print(img_BGRA.shape)
             # cv2.imwrite("test.png", img_BGRA)
 
             # resize the image so it more easily fits on our screen

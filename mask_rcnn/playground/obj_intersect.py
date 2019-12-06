@@ -53,22 +53,36 @@ from mrcnn import visualize
 #CREATE MASK FROM DATAFRAME
 
 #read dataframe
-dframe = pd.read_csv('detection_df_191411.csv')
-mask = dframe.Mask[0]
-print(len(mask))
-print(mask)
+# dframe = pd.read_csv('detection_df_191411.csv')
+# mask = dframe.Mask[0]
+# print(len(mask))
+# print(mask)
 
 # mask_bool = mask.astype(int)
 
 #open image
-imagepath = ('/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/examples/LETTUCE_89.JPG')
-image = cv2.imread(imagepath)
+imagepath = ('/Users/aldo/Desktop/git-romi/sky_crop/mask_rcnn/detection/PREDICT_10.png')
+image = cv2.imread(imagepath, cv2.IMREAD_UNCHANGED)
 print(image.shape)
 image = imutils.resize(image, width=1024)
 print(image.shape)
-masks = np.zeros((image.shape[0], image.shape[1]), dtype="uint8")
-print(len(masks))
-ptsList
+
+b,g,r,a = cv2.split(image)
+cv2.imshow('alpha',a)
+cv2.waitKey(0)
+
+
+# fig = pyplot.figure(1, figsize=(10, 4))
+# ax = fig.add_subplot(121)
+# ax.set_xlim(0, 30)
+# ax.set_ylim(0, 30)
+#
+# ax.add_patch(PolygonPatch(image.get_contour(), fc='#990000', alpha=0.7))
+# ax.add_patch(PolygonPatch(r2.get_contour(), fc='#000099', alpha=0.7))
+# ax.add_patch(PolygonPatch(r1.intersection(r2), fc='#009900', alpha=1))
+#
+# pyplot.show()
+
 
 
 #
