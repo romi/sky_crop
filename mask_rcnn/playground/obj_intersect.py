@@ -15,29 +15,31 @@ def parse_JSON ():
     json_data = json.loads(data)
     for i in json_data:
         if i[0] != "_":
+            pts = []
             file = (json_data[i]['filename'])
-            x = (json_data[i]['regions'][0]['shape_attributes']['all_points_x'])
-            y = (json_data[i]['regions'][0]['shape_attributes']['all_points_y'])
-            pts_list[file] = np.column_stack((x,y))
+            regions = json_data[i]['regions']
+            for k in range(len(regions)):
+                x = (regions[k]['shape_attributes']['all_points_x'])
+                y = (regions[k]['shape_attributes']['all_points_y'])
+                pts.append(np.column_stack((x,y)))
+            pts_list[file] = pts
     return pts_list
+
 
 def draw_mask(image_path, ptsList):  # to draw mask from polyline on the raw image
     # read image
     img = cv2.imread(image_path)
-
-    # draw white mask on black background
-    background = np.zeros((img.shape[0], img.shape[1], 3), np.uint8)
-
-    # draw and fill polyline
-    bkg = cv2.fillPoly(background, [ptsList], (255, 255, 255))
+    background = np.zeros((img.shape[0], img.shape[1], 3), np.uint8)        # draw white mask on black background
+    for j in ptsList:
+        bkg = cv2.fillPoly(background, [j], (255, 255, 255)) # draw and fill polyline
     # add mask in alpha channel
     image_b = imutils.resize(bkg, width=1024)
 
     b, g, image_b = cv2.split(image_b)
     print ("Mask_IoU Image")
-    # cv2.imshow('mask_IoU', pline)
-    # cv2.waitKey(0)
-    # cv2.destroyWindow('mask_IoU')
+    cv2.imshow('mask_IoU', image_b)
+    cv2.waitKey(0)
+    cv2.destroyWindow('mask_IoU')
     return image_b
 
 def load_predicted(imagepath):
@@ -45,9 +47,9 @@ def load_predicted(imagepath):
     pred_img = imutils.resize(pred_img, width=1024)
     b, g, r, image_a = cv2.split(pred_img)
     print("Predicted Image")
-    # cv2.imshow('predicted', image_a)
-    # cv2.waitKey(0)
-    # cv2.destroyWindow('predicted')
+    cv2.imshow('predicted', image_a)
+    cv2.waitKey(0)
+    cv2.destroyWindow('predicted')
     return image_a
 
 def calculate_int_area (image_a, image_b):
@@ -57,8 +59,9 @@ def calculate_int_area (image_a, image_b):
 
     print ("INTERSECTION AREA: ", np.sum(int_area[0].astype(int)))
 
-    # cv2.imshow('int', int_img)
-    # cv2.waitKey(0)
+    cv2.imshow('int', int_img)
+    cv2.waitKey(0)
+    cv2.destroyWindow('int')
     return int_img
 
 
@@ -68,6 +71,7 @@ for i in parse_JSON():
     print ("IMAGE: ", i)
 
     # draw mask for the image
+
     pts_list = parse_JSON()[i] # list of points for polyline
     image_b = draw_mask(image_b_path,pts_list)
 
@@ -79,7 +83,7 @@ for i in parse_JSON():
 
     # compare these two masks
     output = cv2.imread(image_b_path)
-    pline = cv2.polylines(output, np.int32([pts_list]), True, (0, 220, 220), 6)
+    # pline = cv2.polylines(output, np.int32([pts_list]), True, (0, 220, 220), 6)
     output = imutils.resize(output,width=1024)
     overlay = calculate_int_area(image_a,image_b)
     overlay = cv2.cvtColor(overlay, cv2.COLOR_GRAY2RGB)
