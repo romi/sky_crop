@@ -3,6 +3,7 @@ import json
 import cv2
 import imutils
 import numpy as np
+import pandas as pd
 
 
 abs_path = os.path.abspath(os.path.dirname(__file__))
@@ -25,7 +26,6 @@ def parse_JSON ():
             pts_list[file] = pts
     return pts_list
 
-
 def draw_mask(image_path, ptsList):  # to draw mask from polyline on the raw image
     # read image
     img = cv2.imread(image_path)
@@ -37,9 +37,10 @@ def draw_mask(image_path, ptsList):  # to draw mask from polyline on the raw ima
 
     b, g, image_b = cv2.split(image_b)
     print ("Mask_IoU Image")
-    cv2.imshow('mask_IoU', image_b)
-    cv2.waitKey(0)
-    cv2.destroyWindow('mask_IoU')
+
+    # cv2.imshow('mask_IoU', image_b)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow('mask_IoU')
     return image_b
 
 def load_predicted(imagepath):
@@ -47,23 +48,27 @@ def load_predicted(imagepath):
     pred_img = imutils.resize(pred_img, width=1024)
     b, g, r, image_a = cv2.split(pred_img)
     print("Predicted Image")
-    cv2.imshow('predicted', image_a)
-    cv2.waitKey(0)
-    cv2.destroyWindow('predicted')
+
+    # cv2.imshow('predicted', image_a)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow('predicted')
     return image_a
 
 def calculate_int_area (image_a, image_b):
     int_area = np.logical_xor([image_b == 255], [image_a == 255])
     int_img = (int_area[0].astype(int)) * 255
     int_img = int_img.astype(np.uint8)
+    area = np.sum(int_area[0].astype(int))
 
-    print ("INTERSECTION AREA: ", np.sum(int_area[0].astype(int)))
+    print ("INTERSECTION AREA: ",area )
 
-    cv2.imshow('int', int_img)
-    cv2.waitKey(0)
-    cv2.destroyWindow('int')
-    return int_img
+    # cv2.imshow('int', int_img)
+    # cv2.waitKey(0)
+    # cv2.destroyWindow('int')
+    return int_img, area
 
+#list of overlapping area
+calc_area = []
 
 for i in parse_JSON():
     # read image name from json file
@@ -71,23 +76,34 @@ for i in parse_JSON():
     print ("IMAGE: ", i)
 
     # draw mask for the image
-
     pts_list = parse_JSON()[i] # list of points for polyline
     image_b = draw_mask(image_b_path,pts_list)
 
     # get the mask from predicted image
     suffix =  "../detection/PREDICT_" + i[:-3] + "png"
     image_a_path = (os.path.join(abs_path, suffix))
-
     image_a = load_predicted(image_a_path)
 
     # compare these two masks
     output = cv2.imread(image_b_path)
+
     # pline = cv2.polylines(output, np.int32([pts_list]), True, (0, 220, 220), 6)
     output = imutils.resize(output,width=1024)
-    overlay = calculate_int_area(image_a,image_b)
+    overlay, area= calculate_int_area(image_a,image_b)
     overlay = cv2.cvtColor(overlay, cv2.COLOR_GRAY2RGB)
     alpha = 0.5
-    cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
-    cv2.imshow(i, output)
-    cv2.waitKey(0)
+    calc_area.append(area)
+    # cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
+    # cv2.imshow(i, output)
+    # cv2.waitKey(0)
+
+print(calc_area)
+
+# add column to dataframe
+csv_path = (os.path.join(abs_path, "../detection_df.csv"))
+data = pd.read_csv(csv_path)
+print(data)
+data = data.groupby(['Log','Img_Name'],as_index=False)['Scores'].mean()
+data['Inter_Area'] = calc_area
+
+print(data)
