@@ -4,7 +4,8 @@ import cv2
 import imutils
 import numpy as np
 import pandas as pd
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 abs_path = os.path.abspath(os.path.dirname(__file__))
 path = (os.path.join(abs_path, "../IoU/via_export_json.json"))
@@ -105,5 +106,19 @@ data = pd.read_csv(csv_path)
 print(data)
 data = data.groupby(['Log','Img_Name'],as_index=False)['Scores'].mean()
 data['Inter_Area'] = calc_area
-
 print(data)
+
+# Explanatory Data Analysis (EDA)
+# Reference_https://www.youtube.com/watch?v=3r62Gt7-hVs&list=RD8aEAAIm-oz8&index=2, https://vita.had.co.nz/papers/gpp.pdf
+# pairs plot
+x = data['Inter_Area'].tolist()
+y = data['Scores'].tolist()
+
+print(x,y)
+
+sns.set_style("white")
+dataplot = sns.lmplot('Scores','Inter_Area',data,
+                      height=7, aspect=0.9,
+                      scatter_kws=dict(s=30, linewidths=.5),fit_reg=False)
+dataplot.set(xlim=(0.965, 1.0), ylim=(100, 40000))
+plt.show()
