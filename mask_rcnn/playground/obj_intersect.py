@@ -39,9 +39,9 @@ def draw_mask(image_path, ptsList):  # to draw mask from polyline on the raw ima
     b, g, image_b = cv2.split(image_b)
     print ("Mask_IoU Image")
 
-    # cv2.imshow('mask_IoU', image_b)
-    # cv2.waitKey(0)
-    # cv2.destroyWindow('mask_IoU')
+    cv2.imshow('mask_IoU', image_b)
+    cv2.waitKey(0)
+    cv2.destroyWindow('mask_IoU')
     return image_b
 
 def load_predicted(imagepath):
@@ -63,9 +63,9 @@ def calculate_int_area (image_a, image_b):
 
     print ("INTERSECTION AREA: ",area )
 
-    # cv2.imshow('int', int_img)
-    # cv2.waitKey(0)
-    # cv2.destroyWindow('int')
+    cv2.imshow('int', int_img)
+    cv2.waitKey(0)
+    cv2.destroyWindow('int')
     return int_img, area
 
 #list of overlapping area
@@ -94,9 +94,9 @@ for i in parse_JSON():
     overlay = cv2.cvtColor(overlay, cv2.COLOR_GRAY2RGB)
     alpha = 0.5
     calc_area.append(area)
-    # cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
-    # cv2.imshow(i, output)
-    # cv2.waitKey(0)
+    cv2.addWeighted(overlay, alpha, output, 1 - alpha, 0, output)
+    cv2.imshow(i, output)
+    cv2.waitKey(0)
 
 print(calc_area)
 
@@ -109,8 +109,8 @@ data['Inter_Area'] = calc_area
 print(data)
 
 # Explanatory Data Analysis (EDA)
+# REGRESSION PLOT
 # Reference_https://www.youtube.com/watch?v=3r62Gt7-hVs&list=RD8aEAAIm-oz8&index=2, https://vita.had.co.nz/papers/gpp.pdf
-# pairs plot
 x = data['Inter_Area'].tolist()
 y = data['Scores'].tolist()
 

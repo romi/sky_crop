@@ -306,8 +306,6 @@ if __name__ == "__main__":
                     a_channel = np.where((a_channel == 255)|(mask == 1), 255,0).astype('uint8')
 
 
-
-
             # convert the image back to BGR so we can use OpenCV's
             # drawing functions
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
@@ -358,7 +356,6 @@ if __name__ == "__main__":
         detection_df = DataFrame.from_dict(data)
         detection_df.to_csv('detection_df.csv',index=False)
         print(detection_df)
-
 
 
     # check to see if we are investigating our images and masks
