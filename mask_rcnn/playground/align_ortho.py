@@ -11,6 +11,7 @@ idxs=np.array(np.where(im)).T
 # PRINCIPAL COMPONENT ANALYSIS
 p=decomposition.PCA()
 res=p.fit(idxs)
+print(idxs)
 print(p.components_)
 print(p.explained_variance_)
 
@@ -23,9 +24,9 @@ def draw_vector(v0, v1, ax=None):
     ax.annotate('', v1, v0, arrowprops=arrowprops)
 
 # PLOT DATA
-plt.scatter(idxs[:, 0], idxs[:, 1], alpha=0.2)
+plt.scatter(idxs[:, 0], idxs[:, 1], s=0.05, alpha=0.01)
 for length, vector in zip(p.explained_variance_, p.components_):
-    v = vector * 3 * np.sqrt(length)
+    v = vector * 1 * np.sqrt(length)
     draw_vector(p.mean_, p.mean_ + v)
 plt.axis('equal')
 plt.show()
@@ -36,22 +37,6 @@ plt.show()
 # angle=np.arctan(res.components_[0][0]/res.components_[0][1])
 # print(angle)
 #
-#
-# # VISUALIZE PCA
-# fig = plt.figure(figsize = (8,8))
-# ax = fig.add_subplot(1,1,1)
-# ax.set_xlabel('Principal Component 1', fontsize = 15)
-#
-# targets = ['Iris-setosa']
-# colors = ['r']
-#
-# indicesToKeep = p['target'] == target
-# ax.scatter(finalDf.loc[indicesToKeep, 'principal component 1']
-#            , finalDf.loc[indicesToKeep, 'principal component 2']
-#            , c = color
-#            , s = 50)
-# ax.legend(targets)
-# ax.grid()
 #
 # # ROTATE IMAGE
 # im=cv2.imread("/Users/aldo/Desktop/odm_orthophoto.tif")
