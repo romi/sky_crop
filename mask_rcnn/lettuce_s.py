@@ -383,9 +383,8 @@ if __name__ == "__main__":
                 classID = r["class_ids"][i]
                 label = CLASS_NAMES[classID]
                 score = r["scores"][i]
-
-                points = {"startX": str(startX), "startY": str(startY),
-                          "endX": str(endX), "endY": str(endY)}
+                mid_point = [(startX+endX)/2, (startY+endY)/2]
+                points = {"X": str(mid_point[0]), "Y": str(mid_point[1])}
                 plants[str(ind)] = points
 
                 # draw the class label and score on the image
@@ -399,7 +398,7 @@ if __name__ == "__main__":
             # show and save the output image
             imgDetect = os.path.join(savepath, "PREDICT_" + filename)
             cv2.imwrite(imgDetect, image)
-        json.dump(plant_index, json_plant_index, indent=4)
+        json.dump(plant_index, json_plant_index, indent=2)
 
     # check to see if we are investigating our images and masks
     elif args["mode"] == "investigate":
