@@ -28,6 +28,7 @@ from imutils import perspective
 DATASET_PATH = os.path.abspath("lettuce")
 IMAGES_PATH = os.path.sep.join([DATASET_PATH, "images"])
 ANNOT_PATH = os.path.sep.join([DATASET_PATH, "via_region_data.json"])
+json_plant_index = open('/Users/soroush/Desktop/plant_index.json', 'w')
 
 # initialize the amount of data to use for training
 TRAINING_SPLIT = 0.75
@@ -50,7 +51,7 @@ COCO_PATH = "mask_rcnn_coco.h5"
 
 # initialize the name of the directory where logs and output model
 # snapshots will be stored
-LOGS_AND_MODEL_DIR = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/"
+LOGS_AND_MODEL_DIR = "/Volumes/HDD/Noumena/logs"
 
 
 class ObjConfig(Config):
@@ -201,12 +202,14 @@ def find_marker(image):
     upper_red = np.array([180, 255, 255])  # upper range for blue marker
     mask = cv2.inRange(hsv, lower_red, upper_red)  # find the blue marker
     res = cv2.bitwise_and(image, image, mask=mask)
-    res = cv2.GaussianBlur(res, (5, 5), cv2.BORDER_DEFAULT)  # blurring to prepare for edge detection
+    # blurring to prepare for edge detection
+    res = cv2.GaussianBlur(res, (5, 5), cv2.BORDER_DEFAULT)
     gray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
     edged = cv2.Canny(gray, 50, 150)
     edged = cv2.dilate(edged, None, iterations=2)
     edged = cv2.erode(edged, None, iterations=2)
-    cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cv2.findContours(
+        edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)  # contour (boundary) of the blue marker
 
     # creating a dictionary for each marker found, associated with it's area
@@ -217,7 +220,7 @@ def find_marker(image):
 
     # finding the largest contour (largest marker)
     largest_contour = max(cnts_areas.items(), key=operator.itemgetter(1))[0]
-    print (largest_contour)
+    print(largest_contour)
     box = cv2.minAreaRect(cnts[largest_contour])
     box = cv2.boxPoints(box)
     box = np.array(box, dtype="int")
@@ -231,22 +234,26 @@ def find_marker(image):
 
     # writing the dimensions of the marker on the picture
     if marker_area > 500:
-        print ("marker_area is:", marker_area)
-        midA = (int((box[0][0] + box[1][0]) / 2), int((box[0][1] + box[1][1]) / 2))
-        midB = (int((box[1][0] + box[2][0]) / 2), int((box[1][1] + box[2][1]) / 2))
+        print("marker_area is:", marker_area)
+        midA = (int((box[0][0] + box[1][0]) / 2),
+                int((box[0][1] + box[1][1]) / 2))
+        midB = (int((box[1][0] + box[2][0]) / 2),
+                int((box[1][1] + box[2][1]) / 2))
         mA = 50
         mB = 50
         actual_marker_area = mA * mB
         image_scale = math.sqrt(actual_marker_area / marker_area)
-        print ("image scale is:", image_scale)
+        print("image scale is:", image_scale)
         dA = dA * image_scale
         dB = dB * image_scale
-        cv2.putText(image, str(int(dA)), midA, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        cv2.putText(image, str(int(dB)), midB, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(image, str(int(dA)), midA,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(image, str(int(dB)), midB,
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         return image_scale
 
 
-def draw_box_size(image, box_pts,scale):
+def draw_box_size(image, box_pts, scale):
     x1 = box_pts[1]
     y1 = box_pts[0]
     x2 = box_pts[3]
@@ -255,8 +262,10 @@ def draw_box_size(image, box_pts,scale):
     dY = (y2 - y1)
     mA = (int(dX / 2 + x1), int(y2))
     mB = (int(x2), int(dY / 2 + y1))
-    cv2.putText(image, str(int(dX * scale)), mA, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv2.putText(image, str(int(dY * scale)), mB, cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    cv2.putText(image, str(int(dX * scale)), mA,
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    cv2.putText(image, str(int(dY * scale)), mB,
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
 
 if __name__ == "__main__":
@@ -308,7 +317,8 @@ if __name__ == "__main__":
         config = ObjInferenceConfig()
 
         # initialize the Mask R-CNN model for inference
-        model = modellib.MaskRCNN(mode="inference", config=config, model_dir=LOGS_AND_MODEL_DIR)
+        model = modellib.MaskRCNN(
+            mode="inference", config=config, model_dir=LOGS_AND_MODEL_DIR)
 
         # load our trained Mask R-CNN
         weights = args["weights"] if args["weights"] \
@@ -316,12 +326,14 @@ if __name__ == "__main__":
         model.load_weights(weights, by_name=True)
 
         # define path
-        filepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/lettuce/images/*.JPG"
-        savepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/lettuce/detection"
+        filepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/examples/*.JPG"
+        savepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/detection/"
         directory = glob.glob(filepath)
         directory.sort()
         # save detected image ratio
-        file = open('ratios.txt', 'w')
+        # file = open('ratios.txt', 'w')
+        plant_index = {}
+
         # start loop to read images
         for imagepath in directory:
             # get image name
@@ -331,65 +343,63 @@ if __name__ == "__main__":
             # ordering, and resize the image
             image = cv2.imread(imagepath)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            image = imutils.resize(image, width=1024)
+            # image = imutils.resize(image, width=1024)
 
             # perform a forward pass of the network to obtain the results
             r = model.detect([image], verbose=1)[0]
 
+            print(r["rois"])
             # finding the blue marker in the pictures, returns the scale of the image
-            image_scale = find_marker(image)
-            if image_scale is None: image_scale = 0
+            # image_scale = find_marker(image)
+            # if image_scale is None:
+            # image_scale = 0
             # loop over of the detected object's bounding boxes and
             # masks, drawing each as we go along
-            for i in range(0, r["rois"].shape[0]):
+            for i in range(r["rois"].shape[0]):
                 mask = r["masks"][:, :, i]
                 unique, counts = np.unique(mask, return_counts=True)
                 mask_items = dict(zip(unique, counts))
 
-                ratio = mask_items[True] / (mask_items[True] + mask_items[False])
+                ratio = mask_items[True] / \
+                    (mask_items[True] + mask_items[False])
                 image = visualize.apply_mask(image, mask,
                                              (1.0, 0.0, 0.0), alpha=0.4)
                 image = visualize.draw_box(image, r["rois"][i],
                                            (1.0, 0.0, 0.0))
 
-                draw_box_size(image, (r["rois"][i]),image_scale)
+                # draw_box_size(image, (r["rois"][i]), image_scale)
 
             # convert the image back to BGR so we can use OpenCV's
             # drawing functions
 
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
+            plants = {}
+            
             # loop over the predicted scores and class labels
-            for i in range(0, len(r["scores"])):
+            for ind, i in enumerate(range(len(r["scores"]))):
                 # extract the bounding box information, class ID, label,
                 # and predicted probability from the results
-                (startY, startX, endY, end) = r["rois"][i]
+                (startY, startX, endY, endX) = r["rois"][i]
                 classID = r["class_ids"][i]
                 label = CLASS_NAMES[classID]
                 score = r["scores"][i]
+
+                points = {"startX": str(startX), "startY": str(startY),
+                          "endX": str(endX), "endY": str(endY)}
+                plants[str(ind)] = points
 
                 # draw the class label and score on the image
                 text = "{}: {:.4f}".format(label, score)
                 y = startY - 10 if startY - 10 > 10 else startY + 10
                 cv2.putText(image, text, (startX, y),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-
-
+            plant_index[filename] = plants
             # resize the image so it more easily fits on our screen
             # image = imutils.resize(image, width=1024)
-
             # show and save the output image
             imgDetect = os.path.join(savepath, "PREDICT_" + filename)
-            # cv2.imshow(filename, image)
             cv2.imwrite(imgDetect, image)
-            # cv2.waitKey(0)
-            print(filename)
-            print(ratio)
-            file.write(str(filename))
-            file.write(" ,")
-            file.write(str(ratio))
-            file.write("\n")
-        file.close()
+        json.dump(plant_index, json_plant_index, indent=4)
 
     # check to see if we are investigating our images and masks
     elif args["mode"] == "investigate":
