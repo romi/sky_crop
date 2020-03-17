@@ -3,10 +3,10 @@ import os
 import glob
 import numpy as np
 from PIL import Image
-from _parameters_ import div_y, div_x
+from _parameters_ import div_y, div_x, folder, date, view_process
 
 # open image
-path = '/Users/soroush/Desktop/aligned_ps.png'
+path = '{0}/{1}_aligned_ps.png'.format(folder,date)
 img = cv2.imread(path)
 img_name = os.path.splitext(os.path.split(path)[-1])[0]
 height, width = img.shape[0:2]
@@ -26,8 +26,10 @@ limY = int(height / div_y)
 print("subX\t{0}".format(limX))
 print("subY\t{0}".format(limY))
 
+# make a folder called 'cropped' to save images
+os.mkdir('{}/cropped'.format(folder))
 # path to save images
-img_dir = '/Users/soroush/Desktop/aligned_partitioned/'
+img_dir = '{}/cropped'.format(folder)
 imgs_list = []
 
 # crop and save images
@@ -38,8 +40,9 @@ for j in range(div_y):
         img_path = os.path.join(img_dir, img_file)
         imgs_list.append(img_path)
         cv2.imwrite(os.path.join(img_dir, img_file), crop_img)
-        # cv2.imshow(img_file, crop_img)
-        # cv2.waitKey(0)
+        if view_process:
+            cv2.imshow(img_file, crop_img)
+            cv2.waitKey(0)
 
 
 print("Finished partitioning!")

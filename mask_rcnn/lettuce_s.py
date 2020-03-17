@@ -23,12 +23,13 @@ import math
 import operator
 from scipy.spatial import distance as dist
 from imutils import perspective
+from playground._parameters_ import date, folder, LOGS_AND_MODEL_DIR, view_process
 
 # initialize the dataset path, images path, and annotations file path
 DATASET_PATH = os.path.abspath("lettuce")
 IMAGES_PATH = os.path.sep.join([DATASET_PATH, "images"])
 ANNOT_PATH = os.path.sep.join([DATASET_PATH, "via_region_data.json"])
-json_plant_index = open('/Users/soroush/Desktop/plant_index.json', 'w')
+json_plant_index = open('{0}/{1}_plant_index.json'.format(folder,date), 'w')
 
 # initialize the amount of data to use for training
 TRAINING_SPLIT = 0.75
@@ -51,7 +52,7 @@ COCO_PATH = "mask_rcnn_coco.h5"
 
 # initialize the name of the directory where logs and output model
 # snapshots will be stored
-LOGS_AND_MODEL_DIR = "/Volumes/HDD/Noumena/logs"
+# LOGS_AND_MODEL_DIR = "/Volumes/HDD/Noumena/logs"
 
 
 class ObjConfig(Config):
@@ -195,7 +196,6 @@ class ObjDataset(utils.Dataset):
         return (masks.astype("bool"), np.ones((masks.shape[-1],),
                                               dtype="int32"))
 
-
 def find_marker(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)  # converting to HSV
     lower_red = np.array([90, 50, 50])  # lower range for blue marker
@@ -251,7 +251,6 @@ def find_marker(image):
         cv2.putText(image, str(int(dB)), midB,
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         return image_scale
-
 
 def draw_box_size(image, box_pts, scale):
     x1 = box_pts[1]
@@ -326,8 +325,9 @@ if __name__ == "__main__":
         model.load_weights(weights, by_name=True)
 
         # define path
-        filepath = "/Users/soroush/Desktop/aligned_partitioned/*.jpg"
-        savepath = "/Users/soroush/Desktop/aligned_partitioned_2/"
+        filepath = '{}/cropped/*.jpg'.format(folder)
+        os.mkdir('{}/detected'.format(folder))
+        savepath = '{}/detected'.format(folder)
         directory = glob.glob(filepath)
         directory.sort()
         # save detected image ratio
@@ -348,7 +348,7 @@ if __name__ == "__main__":
             # perform a forward pass of the network to obtain the results
             r = model.detect([image], verbose=1)[0]
 
-            print(r["rois"])
+            # print(r["rois"])
             # finding the blue marker in the pictures, returns the scale of the image
             # image_scale = find_marker(image)
             # if image_scale is None:
@@ -366,7 +366,6 @@ if __name__ == "__main__":
                                              (1.0, 0.0, 0.0), alpha=0.4)
                 image = visualize.draw_box(image, r["rois"][i],
                                            (1.0, 0.0, 0.0))
-
                 # draw_box_size(image, (r["rois"][i]), image_scale)
 
             # convert the image back to BGR so we can use OpenCV's
@@ -399,6 +398,9 @@ if __name__ == "__main__":
             # show and save the output image
             imgDetect = os.path.join(savepath, "PREDICT_" + filename)
             cv2.imwrite(imgDetect, image)
+            if view_process:
+                cv2.imshow(filename, imutils.resize(image,600))
+                cv2.waitKey(0)
         json.dump(plant_index, json_plant_index, indent=2)
 
     # check to see if we are investigating our images and masks

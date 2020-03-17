@@ -3,10 +3,10 @@ import os
 import glob
 import numpy as np
 from PIL import Image
-from _parameters_ import div_x, div_y
+from _parameters_ import div_x, div_y, date, folder, view_process
 
-# path to save images
-img_dir = '/Users/soroush/Desktop/aligned_partitioned_2/*.jpg'
+# path to read images
+img_dir = '{}/detected/*.jpg'.format(folder)
 imgs_list = glob.glob(img_dir)
 imgs_list.sort()
 
@@ -34,8 +34,10 @@ for j in range(div_y):
     y_offset += im.size[1]
     x_offset = 0
 
-# new_im.show('result', new_im)
-new_im.save('test.jpg')
+if view_process:
+    new_im.show('Rebuilt Image', new_im)
 
-print("Finished Assembly!")
+new_im.save('{0}/{1}_detected_total.jpg'.format(folder, date))
+
+print("Finished Rebuilding!")
 print("--------------------------------------------")

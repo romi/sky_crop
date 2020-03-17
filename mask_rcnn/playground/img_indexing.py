@@ -2,7 +2,7 @@ import cv2
 import imutils
 import json
 import numpy as np
-from _parameters_ import div_y, div_x
+from _parameters_ import div_y, div_x, date, folder, view_process
 
 # take detected lettuces' position from "plant_index.json" file.
 # assemble the points from cropped images to the large image.
@@ -34,25 +34,35 @@ def assemble_points(img_names):
 
 
 # path to stitched, aligned and detected image
-img_dir = '/Users/soroush/Desktop/detected.jpg'
+img_dir = '{0}/{1}_detected_total.jpg'.format(folder, date)
 img = cv2.imread(img_dir, 3)
 
 print("--------------------------------------------")
 print("Started Indexing", '\n')
 
 # path to plant_index.json
-json_file = '/Users/soroush/Desktop/plant_index.json'
+json_file = '{0}/{1}_plant_index.json'.format(folder, date)
 with open(json_file) as ind_file:
     img_names = json.load(ind_file)
 
 points = assemble_points(img_names)
+print("indexing {} plants...".format(len(points)), '\n')
 radius = 80
 for pt_ind in points:
     coordinates = points[pt_ind]
     center = (int(coordinates['x']), int(coordinates['y']))
     # print(center)
     # cv2.circle(img, center, radius, (255, 255, 255), 3)
-    text_center = (int(coordinates['x']-radius/2), int(coordinates['y']+radius/3))
-    cv2.putText(img, str(pt_ind), text_center, cv2.FONT_HERSHEY_SIMPLEX, 4, (255, 255, 255), 15)
+    text_center = (int(coordinates['x']-radius/2),
+                   int(coordinates['y']+radius/3))
+    cv2.putText(img, str(pt_ind), text_center,
+                cv2.FONT_HERSHEY_SIMPLEX, 4, (255, 255, 255), 15)
 
-cv2.imwrite('indexed.jpg', img)
+cv2.imwrite('{0}/{1}_indexed.jpg'.format(folder, date), img)
+
+if view_process:
+    cv2.imshow('Indexed', imutils.resize(img,1000))
+    cv2.waitKey(0)
+
+print("Indexed image saved")
+print("--------------------------------------------")

@@ -2,11 +2,13 @@ import cv2
 import numpy as np
 from sklearn import decomposition
 import imutils
+from _parameters_ import date,folder, view_process
 
-filepath = "/Users/soroush/Desktop/ortho_align/200305_Orthomosaic.tif"
+filepath = '{0}/{1}_orthomosaic.tif'.format(folder, date)
 
 im = cv2.imread(filepath, 0)
 print("-------------------------------------------")
+print("Starting Align Orthomosaic\n")
 print("IMAGE LOADED \t", "height:", im.shape[0], "width:", im.shape[1])
 idxs = np.array(np.where(im)).T
 
@@ -37,16 +39,16 @@ warped = cv2.warpAffine(
 idxs = np.array(np.where(warped[:, :, 0])).T
 minx, miny = idxs.min(axis=0)
 maxx, maxy = idxs.max(axis=0)
-cropped = warped[minx:maxx, miny:maxy]
+aligned = warped[minx:maxx, miny:maxy]
 
-cv2.imwrite("lala.png", cropped)
+cv2.imwrite('{0}/{1}_aligned.png'.format(folder,date), aligned)
 
-if cropped.any():
-    print ("Cropped\t\t", "file saved!")
-    print("-------------------------------------------")
-else:
-    print ("ERROR\t\t", "file not saved!")
-    print("-------------------------------------------")
+if view_process:
+    cv2.imshow("Aligned Image", imutils.resize(aligned,1000))
+    cv2.waitKey(0)
+
+print ("Aligned\t\t", "file saved!")
+print("-------------------------------------------")
 
 # # PLOT DATA
 # plt.scatter(idxs[:, 0], idxs[:, 1], s=0.05, alpha=0.01)
