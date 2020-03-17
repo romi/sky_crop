@@ -3,21 +3,21 @@ import os
 import glob
 import numpy as np
 from PIL import Image
+from _parameters_ import div_y, div_x
 
 # open image
-path = '/Users/soroush/Desktop/aligned.png'
+path = '/Users/soroush/Desktop/aligned_ps.png'
 img = cv2.imread(path)
 img_name = os.path.splitext(os.path.split(path)[-1])[0]
 height, width = img.shape[0:2]
 
 print("--------------------------------------------")
+print("Started Cropping", '\n')
 print("name\t{0}".format(img_name))
 print("height\t{0}".format(height))
 print("width\t{0}".format(width))
 
 # create a grid to partition the image
-div_x = 10
-div_y = 3
 print("div X\t{0}".format(div_x))
 print("div Y\t{0}".format(div_y))
 
@@ -42,30 +42,5 @@ for j in range(div_y):
         # cv2.waitKey(0)
 
 
-print ("Finished partitioning!")
-
-# rebuilt image from folder
-print ("Rebuilding image")
-images = [Image.open(x) for x in imgs_list]
-widths, heights = zip(*(i.size for i in images))
-
-total_width = max(widths) * div_x
-total_height = max(heights) * div_y
-new_im = Image.new('RGB', (total_width, total_height))
-
-x_offset = 0
-y_offset = 0
-ind = 0
-for j in range(div_y):
-    for i in range(div_x):
-        im = images[ind]
-        new_im.paste(im, (x_offset, y_offset))
-        x_offset += im.size[0]
-        ind += 1
-    y_offset += im.size[1]
-    x_offset = 0
-
-new_im.show('result', new_im)
-new_im.save('test.jpg')
-
+print("Finished partitioning!")
 print("--------------------------------------------")

@@ -326,8 +326,8 @@ if __name__ == "__main__":
         model.load_weights(weights, by_name=True)
 
         # define path
-        filepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/examples/*.JPG"
-        savepath = "/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/detection/"
+        filepath = "/Users/soroush/Desktop/aligned_partitioned/*.jpg"
+        savepath = "/Users/soroush/Desktop/aligned_partitioned_2/"
         directory = glob.glob(filepath)
         directory.sort()
         # save detected image ratio
@@ -374,7 +374,7 @@ if __name__ == "__main__":
 
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
             plants = {}
-            
+
             # loop over the predicted scores and class labels
             for ind, i in enumerate(range(len(r["scores"]))):
                 # extract the bounding box information, class ID, label,
@@ -384,7 +384,8 @@ if __name__ == "__main__":
                 label = CLASS_NAMES[classID]
                 score = r["scores"][i]
                 mid_point = [(startX+endX)/2, (startY+endY)/2]
-                points = {"X": str(mid_point[0]), "Y": str(mid_point[1])}
+                points = {"X": str(mid_point[0]), "Y": str(mid_point[1]),
+                          "range_x": str(image.shape[1]), "range_y": str(image.shape[0])}
                 plants[str(ind)] = points
 
                 # draw the class label and score on the image
