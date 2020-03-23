@@ -46,6 +46,9 @@ with open(json_file) as ind_file:
     img_names = json.load(ind_file)
 
 points = assemble_points(img_names)
+coord_json = open('{0}/{1}_coordinates.json'.format(folder, date), 'w')
+json.dump(points, coord_json, indent=2)
+
 print("indexing {} plants...".format(len(points)), '\n')
 radius = 80
 for pt_ind in points:
