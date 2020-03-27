@@ -7,6 +7,7 @@ from _parameters_ import folder
 
 
 def to_o3d_cloud(cloud):
+    # INPUT :: cloud: 2d numpy array [x,y]
     cloud_coord = np.insert(cloud, 2, 0, axis=1)
     cloud_3d = o3d.geometry.PointCloud()
     cloud_3d.points = o3d.utility.Vector3dVector(cloud_coord)
@@ -84,6 +85,32 @@ def global_registration(source, target, voxel_size):
     return result_icp
 
 
+def compute_distances(source, target):
+    dists = -2 * np.dot(source, target.T) + np.sum(target**2,
+                                                   axis=1) + np.sum(source**2, axis=1)[:, np.newaxis]
+    dists = np.sqrt(dists)
+    return dists
+
+
+def closest_point(source_o3d, target_o3d):
+    # Finding the closest point for each point in reference point-cloud to points from each scan:
+    # 1. Finding the distances between points
+    source_np = np.asarray(source_o3d.points)
+    target_np = np.asarray(target_o3d.points)
+
+    distances = compute_distances(source_np, target_np)
+
+    # 2. Finding the index of closest pair of points
+    min_distance = np.amin(distances, axis=1)  # per row
+    min_distance_reshaped = np.reshape(min_distance, (-1, 1))  # grafting
+
+    ind_source, ind_target = np.where(distances == min_distance_reshaped)
+    ind_target_reshaped = np.reshape(ind_target, (-1, 1))  # grafting
+    # print ('ind target\t', ind_target)
+
+    return ind_target, min_distance
+
+
 print("--------------------------------------------")
 print("Started Registration", '\n')
 
@@ -137,12 +164,29 @@ for i in range(len(dates)-1):
 global_reg[dates[i]] = icp_res.transformation
 global_reg[dates[len(dates)-1]] = np.identity(4)
 
-aligned = []
+
+# Using the transformation Matrix to align the point clouds to reference point-cloud
+registered = {}
 for key in global_reg:
     global_reg[key] = np.asarray(global_reg[key], dtype=np.int16)
-    aligned.append(pcd[key].transform(global_reg[key]))
-    
+    registered[key] = pcd[key].transform(global_reg[key])
+
+# input: source is the reference point cloud, target is the could to compare
+
+indexes = {}
+target_o3d = registered[list(registered.keys())[-1]]
+for date in registered:
+    source_o3d = registered[date]
+    index, distances = closest_point(source_o3d, target_o3d)
+    # filtering based on a threshold
+    index[distances > 100] = -1
+    # cp_result = np.column_stack((index,distances))
+    indexes [date] = index
+
+print (indexes)
+
+
+
 
 # Visualizing transformation
-print(aligned)
-o3d.visualization.draw_geometries(aligned, width=1300, height=800)
+# o3d.visualization.draw_geometries(aligned, width=1300, height=800)
