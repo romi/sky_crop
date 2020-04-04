@@ -1,65 +1,40 @@
 import cv2
 import numpy as np
-import imutils
-import random
+import glob
 import json
 
 #PARAMETERS
-path = '/Users/aldo/Desktop/untitled/01-training/images/0.JPG'
+path_img = '/Users/aldo/Desktop/untitled/01-training/images/0.JPG'
+folder_imgs = '/Users/aldo/Desktop/untitled/01-training/images/'
 json_path = '/Users/aldo/Desktop/git_romi/sky_crop/mask_rcnn/playground/via_region_data.json'
+filenames = [img for img in glob.glob("/Users/aldo/Desktop/untitled/01-training/images/*.JPG")]
+
+org = filenames.sort()
+print(org)
 
 # read image
-img = cv2.imread(path,1)
-
-scale_percent = 10 # percent of original size
+img = cv2.imread(path_img,1)
 height,width,depth = img.shape
-dim = (width, height)
-
-# resize image
-resized = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
-# cv2.imshow('test', resized)
-# cv2.waitKey(0)
-
-# create mask
-# https://stackoverflow.com/questions/25074488/how-to-mask-an-image-using-numpy-opencv
-masks = np.zeros((height,width), dtype="uint8")
 
 #open file
 with open(json_path) as json_file:
     data = json.load(json_file)
-    print(data)
-#     for p in data['people']:
-#         print('Name: ' + p['name'])
-#         print('Website: ' + p['website'])
-#         print('From: ' + p['from'])
-#         print('')
+
+    for item in data:
+        mask = np.zeros((height, width), dtype="uint8")
+        print(data[item]['filename'])
+
+        # draw polylines
+        points_x = data[item]['regions'][0]['shape_attributes']['all_points_x']
+        points_y = data[item]['regions'][0]['shape_attributes']['all_points_y']
+        ptsList = np.column_stack((points_x, points_y))
+        cv2.polylines(mask, [ptsList], True, (255, 2550, 255), 10)
+
+    for filename in os.listdir(folder_imgs):
+        print(filename)
+        cv2.imread()
 
 
-
-#
-# # loop over each of the annotated regions
-# for (i, region) in enumerate(annot["regions"]):
-#     # allocate memory for the region mask
-#     regionMask = np.zeros(masks.shape[:2], dtype="uint8")
-#
-#     # grab the shape and region attributes
-#     sa = region["shape_attributes"]
-#     ra = region["region_attributes"]
-#
-#     # scale the center (x, y)-coordinates and radius of the
-#     # circle based on the dimensions of the resized image
-#     ratio = info["width"] / float(info["orig_width"])
-#
-#     X = [int(i * ratio) for i in sa["all_points_x"]]
-#     Y = [int(i * ratio) for i in sa["all_points_y"]]
-#     ptsList = np.column_stack((X, Y))
-#
-#     # r = int(sa["r"] * ratio)
-#
-#     # draw a circular mask for the region and store the mask
-#     # in the masks array
-#     # cv2.circle(regionMask, (cX, cY), r, 1, -1)
-#     cv2.polylines(regionMask, [ptsList], True, (255, 2550, 255), 10)
-#     cv2.fillPoly(regionMask, [ptsList], 255)
-#     masks[:, :, i] = regionMask
-
+        # mask_resized = imutils.resize(mask, width=800)
+        # cv2.imshow('mask-polyline',mask_resized)
+        # cv2.waitKey(0)
