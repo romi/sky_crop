@@ -12,14 +12,17 @@ json_path = '/Users/aldo/Desktop/git_romi/sky_crop/mask_rcnn/playground/via_regi
 img = cv2.imread(path,1)
 
 scale_percent = 10 # percent of original size
-width = int(img.shape[1] * scale_percent / 100)
-height = int(img.shape[0] * scale_percent / 100)
+height,width,depth = img.shape
 dim = (width, height)
 
 # resize image
 resized = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
 # cv2.imshow('test', resized)
 # cv2.waitKey(0)
+
+# create mask
+# https://stackoverflow.com/questions/25074488/how-to-mask-an-image-using-numpy-opencv
+masks = np.zeros((height,width), dtype="uint8")
 
 #open file
 with open(json_path) as json_file:
@@ -32,10 +35,7 @@ with open(json_path) as json_file:
 #         print('')
 
 
-# # allocate memory for our [height, width, num_instances] array
-# # where each "instance" effectively has its own "channel"
-# masks = np.zeros((img.shape[0], img.shape[1],
-#                   len(annot["regions"])), dtype="uint8")
+
 #
 # # loop over each of the annotated regions
 # for (i, region) in enumerate(annot["regions"]):
