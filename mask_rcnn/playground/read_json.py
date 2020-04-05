@@ -21,18 +21,22 @@ with open(json_path) as json_file:
         img = cv2.imread(img_path, 1)
         height, width, depth = img.shape
 
-        # create mask
-        mask = np.zeros((height, width), dtype="uint8")
+        # create alpha channel
+        # mask = np.zeros((height, width), dtype="uint8"     )
+        overlay = img.copy()
+        alpha = 0.4  # Transparency factor.
 
         # draw polylines
         points_x = data[item]['regions'][0]['shape_attributes']['all_points_x']
         points_y = data[item]['regions'][0]['shape_attributes']['all_points_y']
         ptsList = np.column_stack((points_x, points_y))
-        cv2.polylines(img, [ptsList], True, (255, 2550, 255), 10)
+        cv2.polylines(overlay, [ptsList], True, (255, 2550, 255), 20)
+        cv2.fillPoly(overlay, [ptsList], 255)
+        image_new = cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0)
 
         # visualize image
-        mask_resized = imutils.resize(img, width=800)
-        cv2.imshow('mask-polyline',mask_resized)
+        img_resized = imutils.resize(image_new, width=800)
+        cv2.imshow(img_name,img_resized)
         cv2.waitKey(0)
 
         # # mask on image
