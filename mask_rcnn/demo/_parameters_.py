@@ -7,7 +7,7 @@ div_x = 8
 div_y = 3
 
 # base folder: folder name should be the date, and the folder should contain the 'orthomasic.tif'
-folder = '/Users/soroush/Desktop/200320'
+folder = '/home/noumena/Desktop/200305'
 date = os.path.split(folder)[-1]
 
 # if False: it will only save the output files
@@ -15,7 +15,7 @@ view_process = False
 
 
 # Logs directory for trained model
-LOGS_AND_MODEL_DIR = "/Volumes/HDD/Noumena/logs"
+LOGS_AND_MODEL_DIR = "/home/noumena/Desktop/logls"
 
 
 """

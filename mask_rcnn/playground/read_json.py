@@ -5,8 +5,8 @@ import json
 import os
 
 #PARAMETERS
-path = '/Users/aldo/Desktop/untitled/01-training/images/'
-json_path = '/Users/aldo/Desktop/git_romi/sky_crop/mask_rcnn/playground/via_region_data.json'
+path = '/home/noumena/Desktop/romi/sky_crop/mask_rcnn/demo/lettuce/images'
+json_path = '/home/noumena/Desktop/romi/sky_crop/mask_rcnn/demo/lettuce/191001-lettuce.json'
 
 #open file
 with open(json_path) as json_file:
@@ -36,7 +36,7 @@ with open(json_path) as json_file:
 
         # visualize image
         img_resized = imutils.resize(image_new, width=800)
-        cv2.imshow(img_name,img_resized)
+        cv2.imshow('test',img_resized)
         cv2.waitKey(0)
 
         # # mask on image

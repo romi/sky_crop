@@ -25,10 +25,11 @@ from scipy.spatial import distance as dist
 from imutils import perspective
 from _parameters_ import date, folder, LOGS_AND_MODEL_DIR, view_process
 
+
 # initialize the dataset path, images path, and annotations file path
 DATASET_PATH = os.path.abspath("lettuce")
 IMAGES_PATH = os.path.sep.join([DATASET_PATH, "images"])
-ANNOT_PATH = os.path.sep.join([DATASET_PATH, "via_region_data.json"])
+ANNOT_PATH = os.path.sep.join([DATASET_PATH, "191001-lettuce.json"])
 json_plant_index = open('{0}/{1}_plant_index.json'.format(folder,date), 'w')
 
 # initialize the amount of data to use for training
@@ -253,6 +254,7 @@ def find_marker(image):
         return image_scale
 
 def draw_box_size(image, box_pts, scale):
+    x1 = box_pts[1]
     x1 = box_pts[1]
     y1 = box_pts[0]
     x2 = box_pts[3]
