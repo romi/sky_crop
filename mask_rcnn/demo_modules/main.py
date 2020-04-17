@@ -43,7 +43,7 @@ def is_date(s):
 
 
 if __name__ == "__main__":
-    folder = '/Users/soroush/Desktop/Noumena/sky_crop/mask_rcnn/demo/scans/'
+    folder = '/Users/soroush/Desktop/Noumena/sky_crop_soroush/mask_rcnn/demo/scans/'
     folder_ls = os.listdir(folder)
     dates = []
     for dir in folder_ls:
@@ -56,18 +56,15 @@ if __name__ == "__main__":
         # aligned = a.align(a.dir, angle, diagonal)
         aligned = cv2.imread(a.dir)
         cropped = a.crop(aligned)
-        plants_cor = []
-        it = 0
+        plants_cor = np.zeros((1,2),dtype=np.int32)
         for i in cropped:
-            if it < 2:
-                cell_x = int(i.split(',')[0])
-                cell_y = int(i.split(',')[1])
-                img = cropped[i]
-                img, cell_points = a.detect(img)
-                pts = a.assemble(cell_points, cell_x, cell_y)
-                plants_cor = np.append(plants_cor, pts)
-                it += 1
-            else:
-                pass
+            cell_x = int(i.split(',')[0])
+            cell_y = int(i.split(',')[1])
+            img = cropped[i]
+            img, cell_points = a.detect(img)
+            pts = a.assemble(cell_points, cell_x, cell_y)
+            pts
+            plants_cor = np.append(plants_cor, pts, axis=0)
+        plants_cor = plants_cor[1:,:]
 else:
     pass
