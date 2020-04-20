@@ -5,7 +5,9 @@ import detect
 import assemble
 import cv2
 import imutils
+import copy
 import numpy as np
+from PIL import Image
 
 
 class Scan:
@@ -29,9 +31,12 @@ class Scan:
         self.detected = detect.detect(img)
         return self.detected
 
-    def assemble(self, points, ind_x, ind_y):
-        self.assembled = assemble.assemble_points(points, ind_x, ind_y)
-        return self.assembled
+    def assemble_points(self, points, ind_x, ind_y):
+        self.plant_coordinates = assemble.assemble_points(points, ind_x, ind_y)
+        return self.plant_coordinates
+
+    # def detected_img(self, img):
+        # return self.detected_crop
 
 
 def is_date(s):
@@ -55,16 +60,29 @@ if __name__ == "__main__":
         # angle, diagonal = a.pca_angle(a.dir)
         # aligned = a.align(a.dir, angle, diagonal)
         aligned = cv2.imread(a.dir)
+        height, width = aligned.shape[:2]
         cropped = a.crop(aligned)
-        plants_cor = np.zeros((1,2),dtype=np.int32)
+        plants_cor = np.zeros((1, 2), dtype=np.int32)
+        total_detected = copy.copy(aligned)
+        t = 0
         for i in cropped:
-            cell_x = int(i.split(',')[0])
-            cell_y = int(i.split(',')[1])
-            img = cropped[i]
-            img, cell_points = a.detect(img)
-            pts = a.assemble(cell_points, cell_x, cell_y)
-            pts
-            plants_cor = np.append(plants_cor, pts, axis=0)
-        plants_cor = plants_cor[1:,:]
+            # only runs the code for first cropped image, remove this "if" part to get the full detected image
+            if t < 1: 
+                cell_x = int(i.split(',')[0])
+                cell_y = int(i.split(',')[1])
+                img = cropped[i]
+                img, cell_points = a.detect(img)
+                x_offset = img.shape[1] * cell_x
+                y_offset = img.shape[0] * cell_y
+                total_detected[y_offset:y_offset+img.shape[0], x_offset:x_offset+img.shape[1]] = img
+                pts = a.assemble_points(cell_points, cell_x, cell_y)
+                plants_cor = np.append(plants_cor, pts, axis=0)
+            t += 1
+        plants_cor = plants_cor[1:, :]
+        total_detected = imutils.resize(total_detected, width=1200)
+        a.detected_crop = total_detected
+        cv2.imshow('total_detected', a.detected_crop)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 else:
     pass

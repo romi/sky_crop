@@ -10,3 +10,4 @@ def assemble_points(points, ind_x, ind_y):
         assembled_points.append(point)
     assembled_points = np.asarray(assembled_points, dtype=np.int32)
     return assembled_points
+
